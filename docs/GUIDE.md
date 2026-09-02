@@ -1,10 +1,7 @@
-# 华为手环睡眠数据 → 自托管 MCP（开源教程草稿）
+# 华为手环睡眠数据 → 自托管 MCP
 
-> 状态：草稿。`【已确认】` = 已从代码和实机挖出、可直接发布；`【待口述】` = 只有 toge 记得，
-> 等她补。
->
-> 本文只写**读者要做的事**。发布前的合规、脱敏、签名等维护者工作，以及 fork 相对上游的
-> 工程细节，都在 [huawei-sleep-mcp-release.md](huawei-sleep-mcp-release.md)。
+本文只写**读者要做的事**。fork 相对上游的工程细节和代码位置见
+[PATCHES.md](PATCHES.md)。
 
 ---
 
@@ -25,12 +22,14 @@
                          ┌── HTTPS ──> 你的服务器 ── MCP ──> ChatGPT / Claude / Codex / 其他任意客户端
 
 手环 ──蓝牙──> 一个 APK ─┤
-                         └── 写入 ───> Health Connect ──> 美区 Claude（不用服务器）
+                         └── 写入 ───> Health Connect ──> 美国地区 Claude（Pro / Max、Android 14+；不用服务器）
 ```
 
 默认走上面这条：手机负责从手环取数，再上传到自己的服务器，通过 MCP 给 AI 读取。
 
-如果你只用美区 Claude，事情会简单很多：Claude 可以直接读取 Android Health Connect，因此不用 VPS、域名和 MCP 服务。你只需要完成 Step 1 安装 App、Step 2 连接手环，然后跳到最后的 Health Connect 一节。
+如果你在美国地区使用 Claude Pro / Max，并且手机是 Android 14 或更高版本，事情会简单很多：
+Claude 可以直接读取 Health Connect，因此不用 VPS、域名和 MCP 服务。你只需要完成 Step 1
+安装 App、Step 2 连接手环，然后跳到最后的 Health Connect 一节。
 
 Health Connect 不能直接读取华为手环。
 手环 → 手机这一步仍然需要 Gadgetbridge，只是省掉了后面的自托管服务器和 MCP。
@@ -247,11 +246,12 @@ curl -X POST https://你的域名/mcp \
 
 ## 可选 · Health Connect
 
-无 vpn 的前提下美区 Claude 直连 Health Connect
+这条路目前只适用于美国地区的 Claude Pro / Max，并要求 Android 14 或更高版本；具体条件以
+[Claude 官方说明](https://support.claude.com/en/articles/11869629-use-claude-with-android-apps)为准。
 
 Health Connect 是安卓的系统级健康数据中枢，负责在 App 之间中转数据。
 
-在「健康数据」里：【已确认】
+在「健康数据」里：
 
 - 设置 → 外部集成 → Health Connect → 启用
 - 设备选择里勾选你的手环
@@ -260,8 +260,9 @@ Health Connect 是安卓的系统级健康数据中枢，负责在 App 之间中
 
 最后那条别跳过，理由和 Step 4 第 4 条一样。
 
-Android 14 以下需要单独装 Health Connect，**Google Play 直接搜就有**。
-没有 Google Play 的手机这步会比较麻烦——这也是自托管那条路不需要它的原因。
+Claude 直读要求 Android 14+，Health Connect 已经是系统的一部分。若你只是想把数据写给
+其他 App，较旧的 Android 版本可能需要从 Google Play 单独安装 Health Connect；没有
+Google Play 的手机会比较麻烦——这也是自托管路线不依赖它的原因。
 
 ---
 
@@ -315,8 +316,7 @@ Android 14 以下需要单独装 Health Connect，**Google Play 直接搜就有*
 
 # 跟上游 Gadgetbridge 有什么不一样
 
-不看也能用。这里只说结论，工程细节和代码位置在
-[huawei-sleep-mcp-release.md](huawei-sleep-mcp-release.md)。
+不看也能用。这里只说结论，工程细节和代码位置在 [PATCHES.md](PATCHES.md)。
 
 | 改动                             | 为什么                                                                                                         |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------- |
