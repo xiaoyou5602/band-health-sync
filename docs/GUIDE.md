@@ -9,7 +9,7 @@
 
 让华为手环的睡眠、心率、步数数据，变成你的 AI 助手能直接读到的东西。
 
-只要说一句「感觉我最近没怎么睡好」，它就可以直接主动看你实际的健康数据。
+只要说一句「最近没怎么睡好」，它就可以直接主动看你实际的健康数据。
 
 华为没有给个人用户提供方便的数据导出接口，Health Kit 开放平台也需要企业资质。
 这套方案绕开华为云，直接从手环蓝牙同步原始数据，落到你自己的服务器或者 Android Health Connect。
@@ -27,9 +27,7 @@
 
 默认走上面这条：手机负责从手环取数，再上传到自己的服务器，通过 MCP 给 AI 读取。
 
-如果你在美国地区使用 Claude Pro / Max，并且手机是 Android 14 或更高版本，事情会简单很多：
-Claude 可以直接读取 Health Connect，因此不用 VPS、域名和 MCP 服务。你只需要完成 Step 1
-安装 App、Step 2 连接手环，然后跳到最后的 Health Connect 一节。
+如果你只用美区 Claude，事情会简单很多：Claude 可以直接读取 Health Connect，因此不用 VPS、域名和 MCP 服务。你只需要完成 Step 1 安装 App、Step 2 连接手环，然后跳到最后的 Health Connect 一节。
 
 Health Connect 不能直接读取华为手环。
 手环 → 手机这一步仍然需要 Gadgetbridge，只是省掉了后面的自托管服务器和 MCP。
@@ -246,10 +244,9 @@ curl -X POST https://你的域名/mcp \
 
 ## 可选 · Health Connect
 
-这条路目前只适用于美国地区的 Claude Pro / Max，并要求 Android 14 或更高版本；具体条件以
-[Claude 官方说明](https://support.claude.com/en/articles/11869629-use-claude-with-android-apps)为准。
+Health Connect 是安卓的系统级健康数据中枢，负责在 App 之间中转数据。可以不架服务器，也不用配置 MCP。
 
-Health Connect 是安卓的系统级健康数据中枢，负责在 App 之间中转数据。
+本 fork 负责把华为手环的数据写进 Health Connect，Claude 再通过自己的 Health Connect 功能读取。两者不是同一个集成：本 fork 只是补上华为手环 → Health Connect 这一段
 
 在「健康数据」里：
 
@@ -258,11 +255,7 @@ Health Connect 是安卓的系统级健康数据中枢，负责在 App 之间中
 - 打开「设备同步后进行同步」
 - **设一个初始同步起点**（比如今天 00:00）
 
-最后那条别跳过，理由和 Step 4 第 4 条一样。
-
-Claude 直读要求 Android 14+，Health Connect 已经是系统的一部分。若你只是想把数据写给
-其他 App，较旧的 Android 版本可能需要从 Google Play 单独安装 Health Connect；没有
-Google Play 的手机会比较麻烦——这也是自托管路线不依赖它的原因。
+这条路目前只适用于美国地区的 Claude Pro / Max；具体条件以[Claude 官方说明](https://support.claude.com/en/articles/11869629-use-claude-with-android-apps)为准。
 
 ---
 
