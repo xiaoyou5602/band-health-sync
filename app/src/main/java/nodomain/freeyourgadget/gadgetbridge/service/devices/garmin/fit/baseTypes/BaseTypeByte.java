@@ -1,0 +1,62 @@
+package nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.baseTypes;
+
+import java.nio.ByteBuffer;
+
+public class BaseTypeByte implements BaseTypeInterface {
+
+    private final int min;
+    private final int max;
+    private final int invalid;
+    private final boolean unsigned;
+    private final int size = 1;
+
+    BaseTypeByte(boolean unsigned, int invalid) {
+        if (unsigned) {
+            min = 0;
+            max = 0xff;
+        } else {
+            min = Byte.MIN_VALUE;
+            max = Byte.MAX_VALUE;
+        }
+        this.invalid = invalid;
+        this.unsigned = unsigned;
+    }
+
+
+    @Override
+    public int getByteSize() {
+        return size;
+    }
+
+    @Override
+    public Object decode(final ByteBuffer byteBuffer, double scale, int offset) {
+        int b = unsigned ? Byte.toUnsignedInt(byteBuffer.get()) : byteBuffer.get();
+        if (b < min || b > max)
+            return null;
+        if (b == invalid)
+            return null;
+        return (b / scale) - offset;
+    }
+
+    @Override
+    public void encode(ByteBuffer byteBuffer, Object o, double scale, int offset) {
+        if (null == o) {
+            invalidate(byteBuffer);
+            return;
+        }
+        // Use doubleValue() rather than intValue() so fractional Float/Double inputs are
+        // not truncated before the scale multiplication. Integer-typed inputs unchanged.
+        int i = (int) ((((Number) o).doubleValue() + offset) * scale);
+        if (i < min || i > max) {
+            invalidate(byteBuffer);
+            return;
+        }
+        byteBuffer.put((byte) i);
+    }
+
+    @Override
+    public void invalidate(ByteBuffer byteBuffer) {
+        byteBuffer.put((byte) invalid);
+    }
+
+}

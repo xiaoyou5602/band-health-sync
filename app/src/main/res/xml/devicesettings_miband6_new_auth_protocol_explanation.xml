@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <Preference
+        android:icon="@drawable/ic_open_in_browser"
+        android:persistent="false"
+        android:key="authkey_explanation_new_auth_protocol"
+        android:summary="@string/pref_explanation_authkey_new_protocol" >
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="https://gadgetbridge.org/gadgets/wearables/xiaomi/#device__xiaomi_mi_band_6"
+            />
+    </Preference>
+
+</androidx.preference.PreferenceScreen>

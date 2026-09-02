@@ -1,0 +1,860 @@
+/*  Copyright (C) 2015-2024 Andreas Shimokawa, Carsten Pfeiffer, Daniel Dakhno,
+    Daniele Gobbetti, Julien Pivotto, Matej Drobnič, Taavi Eomäe, Uwe Hermann
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.service.devices.pebble;
+
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.ParcelUuid;
+
+import androidx.annotation.NonNull;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.UUID;
+
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.activities.appmanager.AbstractAppManagerFragment;
+import nodomain.freeyourgadget.gadgetbridge.activities.appmanager.AppManagerActivity;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEvent;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventAppInfo;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventAppManagement;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventAppMessage;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventVersionInfo;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.pebble.GBDeviceEventDataLogging;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.pebble.GBDeviceEventFirmwareUpdateStart;
+import nodomain.freeyourgadget.gadgetbridge.devices.pebble.PBWReader;
+import nodomain.freeyourgadget.gadgetbridge.devices.pebble.PebbleCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.pebble.PebbleInstallable;
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDeviceApp;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.pebble.ble.PebbleLESupport;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.pebble.webview.PebbleJsService;
+import nodomain.freeyourgadget.gadgetbridge.service.serial.GBDeviceIoThread;
+import nodomain.freeyourgadget.gadgetbridge.service.serial.GBDeviceProtocol;
+import nodomain.freeyourgadget.gadgetbridge.devices.pebble.PebbleHardware;
+import nodomain.freeyourgadget.gadgetbridge.util.BondingUtil;
+import nodomain.freeyourgadget.gadgetbridge.util.GB;
+import nodomain.freeyourgadget.gadgetbridge.util.GBPrefs;
+import nodomain.freeyourgadget.gadgetbridge.util.PebbleUtils;
+import nodomain.freeyourgadget.gadgetbridge.util.preferences.DevicePrefs;
+
+class PebbleIoThread extends GBDeviceIoThread {
+    private static final Logger LOG = LoggerFactory.getLogger(PebbleIoThread.class);
+
+    private final GBPrefs prefs = GBApplication.getPrefs();
+    private final DevicePrefs devicePrefs;
+
+    private final PebbleProtocol mPebbleProtocol;
+    private final PebbleSupport mPebbleSupport;
+    private PebbleKitSupport mPebbleKitSupport;
+    private final PebbleActiveAppTracker mPebbleActiveAppTracker;
+    private final boolean mEnablePebblekit;
+
+    private boolean mIsTCP = false;
+    private BluetoothAdapter mBtAdapter = null;
+    private BluetoothSocket mBtSocket = null;
+    private Socket mTCPSocket = null; // for emulator
+    private InputStream mInStream = null;
+    private OutputStream mOutStream = null;
+    private PebbleLESupport mPebbleLESupport;
+
+    private boolean mQuit = false;
+    private boolean mIsConnected = false;
+    private boolean mIsInstalling = false;
+    // Tokens for all committed firmware files; INSTALL is sent for all of them together at the end
+    // so the watch doesn't start flashing mid-transfer while we're still uploading resources.
+    private final ArrayList<Integer> mFirmwareCommittedTokens = new ArrayList<>();
+    // Status from FirmwareUpdateStartResponse (0x0a): -1=pending, 0=stopped, 1=started, 2=cancelled.
+    private int mFirmwareStartStatus = -1;
+    // Timestamp (ms) when WAIT_FIRMWARE_START was entered, for recovery-mode timeout.
+    private long mFirmwareStartTimestamp = 0;
+
+    private PBWReader mPBWReader = null;
+    private GBDeviceApp mCurrentlyInstallingApp = null;
+    private int mAppInstallToken = -1;
+    private InputStream mFis = null;
+    private PebbleAppInstallState mInstallState = PebbleAppInstallState.UNKNOWN;
+    private PebbleInstallable[] mPebbleInstallables = null;
+    private int mCurrentInstallableIndex = -1;
+    private int mInstallSlot = -2;
+    private int mCRC = -1;
+    private int mBinarySize = -1;
+    private int mBytesWritten = -1;
+
+    private void sendAppMessageJS(GBDeviceEventAppMessage appMessage) {
+        sendAppMessage(gbDevice, appMessage);
+        if (appMessage.type == GBDeviceEventAppMessage.TYPE_APPMESSAGE) {
+            write(mPebbleProtocol.encodeApplicationMessageAck(appMessage.appUUID, (byte) appMessage.id));
+        }
+    }
+
+    private static void sendAppMessage(GBDevice device, GBDeviceEventAppMessage message) {
+        if (! ((PebbleCoordinator) device.getDeviceCoordinator()).isBackgroundJsEnabled(device)) {
+            LOG.info("App message received but Pebble JS Service not running");
+            return;
+        }
+        final String jsEvent;
+        try {
+            PebbleJsService.Companion.getInstance().checkAppRunning(device, message.appUUID);
+        } catch (NullPointerException | IllegalStateException ex) {
+            LOG.warn("Unable to send app message: {}", message, ex);
+            return;
+        }
+
+        // TODO: handle ACK and NACK types with ids
+        if (message.type != GBDeviceEventAppMessage.TYPE_APPMESSAGE) {
+            jsEvent = (GBDeviceEventAppMessage.TYPE_NACK == GBDeviceEventAppMessage.TYPE_APPMESSAGE) ? "NACK" + message.id : "ACK" + message.id;
+            LOG.debug("WEBVIEW received ACK/NACK:{} for uuid: {} ID: {}", message.message, message.appUUID, message.id);
+        } else {
+            jsEvent = "appmessage";
+        }
+
+        final String appMessage = PebbleUtils.parseIncomingAppMessage(message.message, message.appUUID, message.id);
+        LOG.debug("to WEBVIEW: event: {} message: {}", jsEvent, appMessage);
+        PebbleJsService.Companion.getInstance().evaluateJsForDevice(device, "if (typeof Pebble == 'object') Pebble.evaluate('" + jsEvent + "',[" + appMessage + "]);", s -> {
+            //TODO: the message should be acked here instead of in PebbleIoThread
+            LOG.debug("Callback from appmessage: {}", s);
+        });
+    }
+
+    PebbleIoThread(PebbleSupport pebbleSupport, GBDevice gbDevice, GBDeviceProtocol gbDeviceProtocol, BluetoothAdapter btAdapter, Context context) {
+        super(gbDevice, context);
+        devicePrefs = GBApplication.getDevicePrefs(gbDevice);
+        mPebbleProtocol = (PebbleProtocol) gbDeviceProtocol;
+        mBtAdapter = btAdapter;
+        mPebbleSupport = pebbleSupport;
+        mEnablePebblekit = devicePrefs.getBoolean("pebble_enable_pebblekit", false);
+        mPebbleProtocol.setAlwaysACKPebbleKit(devicePrefs.getBoolean("pebble_always_ack_pebblekit", false));
+        mPebbleProtocol.setEnablePebbleKit(mEnablePebblekit);
+
+        mPebbleActiveAppTracker = new PebbleActiveAppTracker();
+    }
+
+    private int readWithException(InputStream inputStream, byte[] buffer, int byteOffset, int byteCount) throws IOException {
+        int ret = inputStream.read(buffer, byteOffset, byteCount);
+        if (ret == -1) {
+            throw new IOException("broken pipe");
+        }
+        return ret;
+    }
+
+    @Override
+    protected boolean connect() {
+        String deviceAddress = gbDevice.getAddress();
+        GBDevice.State originalState = gbDevice.getState();
+        gbDevice.setUpdateState(GBDevice.State.CONNECTING, getContext());
+        try {
+            // contains only one ":"? then it is addr:port
+            int firstColon = deviceAddress.indexOf(":");
+            if (firstColon == deviceAddress.lastIndexOf(":")) {
+                mIsTCP = true;
+                InetAddress serverAddr = InetAddress.getByName(deviceAddress.substring(0, firstColon));
+                mTCPSocket = new Socket(serverAddr, Integer.parseInt(deviceAddress.substring(firstColon + 1)));
+                mInStream = mTCPSocket.getInputStream();
+                mOutStream = mTCPSocket.getOutputStream();
+            } else {
+                mIsTCP = false;
+                if (gbDevice.getVolatileAddress() != null && devicePrefs.getBoolean("pebble_force_le", false)) {
+                    deviceAddress = gbDevice.getVolatileAddress();
+                }
+                BluetoothDevice btDevice = mBtAdapter.getRemoteDevice(deviceAddress);
+                // Use BLE for DEVICE_TYPE_LE or for Pebble 2/Time 2/2 Duo which are DEVICE_TYPE_DUAL but BLE-only
+                // Check both btDevice and gbDevice (btDevice.getName() can be null during reconnection)
+                boolean isPebble2 = PebbleHardware.isBleOnly(gbDevice, btDevice);
+                if (btDevice.getType() == BluetoothDevice.DEVICE_TYPE_LE || isPebble2) {
+                    LOG.info("This is a Pebble 2/Time 2/2 Duo or Pebble-LE/Pebble Time LE, will use BLE (isPebble2={})", isPebble2);
+                    mInStream = new PipedInputStream();
+                    mOutStream = new PipedOutputStream();
+                    mPebbleLESupport = new PebbleLESupport(this.getContext(), mPebbleSupport, gbDevice, btDevice, (PipedInputStream) mInStream, (PipedOutputStream) mOutStream);
+                } else {
+                    ParcelUuid[] uuids = btDevice.getUuids();
+                    if (uuids == null) {
+                        return false;
+                    }
+                    for (ParcelUuid uuid : uuids) {
+                        LOG.info("found service UUID {}", uuid);
+                    }
+                    if (uuids.length > 1) {
+                        final UUID UuidSDP = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
+                        mBtSocket = btDevice.createRfcommSocketToServiceRecord(UuidSDP);
+
+                        // TODO: Why is this comment here?
+                        //mBtSocket = btDevice.createRfcommSocketToServiceRecord(uuids[0].getUuid());
+                        mBtSocket.connect();
+                        mInStream = mBtSocket.getInputStream();
+                        mOutStream = mBtSocket.getOutputStream();
+                    } else {
+                        LOG.info("This seems to be a 2025 Pebble will use BLE");
+                        mInStream = new PipedInputStream();
+                        mOutStream = new PipedOutputStream();
+                        mPebbleLESupport = new PebbleLESupport(this.getContext(), mPebbleSupport, gbDevice, btDevice, (PipedInputStream) mInStream, (PipedOutputStream) mOutStream);
+                    }
+                }
+            }
+            if (((PebbleCoordinator) gbDevice.getDeviceCoordinator()).isBackgroundJsEnabled(gbDevice)) {
+                PebbleJsService.Companion.startService(getContext());
+                PebbleUtils.startJsEngineForDevice(getContext(), gbDevice, new UUID(0, 0));
+            } else {
+                LOG.debug("Not enabling background Webview, is disabled in preferences.");
+            }
+        } catch (IOException e) {
+            LOG.error("error while connecting", e);
+            gbDevice.setUpdateState(originalState, getContext());
+
+            cleanup();
+
+            return false;
+        }
+
+        mIsConnected = true;
+        write(mPebbleProtocol.encodeFirmwareVersionReq());
+        gbDevice.setUpdateState(GBDevice.State.CONNECTED, getContext());
+
+        return true;
+    }
+
+    @Override
+    public void run() {
+        LOG.debug("started thread {} for {}", getName(), gbDevice.getAddress());
+
+        mIsConnected = connect();
+        if (!mIsConnected) {
+            if (GBApplication.getPrefs().getAutoReconnect(getDevice()) && !mQuit) {
+                LOG.debug("Failed to connect IO thread, will wait for reconnect");
+                gbDevice.setUpdateState(GBDevice.State.WAITING_FOR_RECONNECT, getContext());
+            } else {
+                LOG.debug("Failed to connect IO thread, disconnecting");
+                gbDevice.setUpdateState(GBDevice.State.NOT_CONNECTED, getContext());
+            }
+            return;
+        }
+
+        byte[] buffer = new byte[8192];
+        enablePebbleKitSupport(true);
+        mQuit = false;
+        while (!mQuit) {
+            try {
+                if (mIsInstalling) {
+                    switch (mInstallState) {
+                        case WAIT_FIRMWARE_START:
+                            if (mFirmwareStartStatus == GBDeviceEventFirmwareUpdateStart.STATUS_STARTED) {
+                                LOG.info("Watch confirmed firmware update started");
+                                mFirmwareStartStatus = -1;
+                                mInstallState = PebbleAppInstallState.START_INSTALL;
+                                continue;
+                            } else if (mFirmwareStartStatus == GBDeviceEventFirmwareUpdateStart.STATUS_STOPPED ||
+                                       mFirmwareStartStatus == GBDeviceEventFirmwareUpdateStart.STATUS_CANCELLED) {
+                                LOG.warn("Watch rejected firmware update start, status={}", mFirmwareStartStatus);
+                                finishInstall(true);
+                                break;
+                            } else if (System.currentTimeMillis() - mFirmwareStartTimestamp > 5000) {
+                                // No response after 5s — assume recovery mode which never replies.
+                                LOG.info("No FirmwareUpdateStartResponse after 5s, proceeding (recovery mode?)");
+                                mFirmwareStartStatus = -1;
+                                mInstallState = PebbleAppInstallState.START_INSTALL;
+                                continue;
+                            }
+                            break;
+                        case WAIT_SLOT:
+                            if (mInstallSlot == -1) {
+                                finishInstall(true); // no slots available
+                            } else if (mInstallSlot >= 0) {
+                                mInstallState = PebbleAppInstallState.START_INSTALL;
+                                continue;
+                            }
+                            break;
+                        case START_INSTALL:
+                            LOG.info("start installing app binary");
+                            PebbleInstallable pi = mPebbleInstallables[mCurrentInstallableIndex];
+                            mFis = mPBWReader.getInputStreamFile(pi.getFileName());
+                            mCRC = pi.getCRC();
+                            mBinarySize = pi.getFileSize();
+                            mBytesWritten = 0;
+                            writeInstallApp(mPebbleProtocol.encodeUploadStart(pi.getType(), mInstallSlot, mBinarySize, mPBWReader.isLanguage() ? "lang" : null));
+                            mAppInstallToken = -1;
+                            mInstallState = PebbleAppInstallState.WAIT_TOKEN;
+                            break;
+                        case WAIT_TOKEN:
+                            if (mAppInstallToken != -1) {
+                                LOG.info("got token " + mAppInstallToken);
+                                mInstallState = PebbleAppInstallState.UPLOAD_CHUNK;
+                                continue;
+                            }
+                            break;
+                        case UPLOAD_CHUNK:
+                            int bytes = 0;
+                            do {
+                                int read = mFis.read(buffer, bytes, 2000 - bytes);
+                                if (read <= 0) break;
+                                bytes += read;
+                            } while (bytes < 2000);
+
+                            if (bytes > 0) {
+                                GB.updateInstallNotification(getContext().getString(
+                                        R.string.installing_binary_d_d, (mCurrentInstallableIndex + 1), mPebbleInstallables.length), true, (int) (((float) mBytesWritten / mBinarySize) * 100), getContext());
+                                writeInstallApp(mPebbleProtocol.encodeUploadChunk(mAppInstallToken, buffer, bytes));
+                                mBytesWritten += bytes;
+                                mAppInstallToken = -1;
+                                mInstallState = PebbleAppInstallState.WAIT_TOKEN;
+                            } else {
+                                mInstallState = PebbleAppInstallState.UPLOAD_COMMIT;
+                                continue;
+                            }
+                            break;
+                        case UPLOAD_COMMIT:
+                            writeInstallApp(mPebbleProtocol.encodeUploadCommit(mAppInstallToken, mCRC));
+                            mAppInstallToken = -1;
+                            mInstallState = PebbleAppInstallState.WAIT_COMMIT;
+                            break;
+                        case WAIT_COMMIT:
+                            if (mAppInstallToken != -1) {
+                                LOG.info("got token " + mAppInstallToken);
+                                mInstallState = PebbleAppInstallState.UPLOAD_COMPLETE;
+                                continue;
+                            }
+                            break;
+                        case UPLOAD_COMPLETE:
+                            if (mPBWReader.isFirmware()) {
+                                // For firmware, defer INSTALL until all files are committed.
+                                // Sending INSTALL early causes the watch to start writing to flash
+                                // immediately, stalling mid-transfer while it's busy erasing. The
+                                // stock app sends INSTALL for all files only after every file is committed.
+                                mFirmwareCommittedTokens.add(mAppInstallToken);
+                                if (++mCurrentInstallableIndex < mPebbleInstallables.length) {
+                                    mInstallState = PebbleAppInstallState.START_INSTALL;
+                                } else {
+                                    mInstallState = PebbleAppInstallState.INSTALL_FIRMWARE;
+                                }
+                                // continue so the state machine advances immediately
+                                continue;
+                            } else {
+                                // For apps, INSTALL each file immediately after commit.
+                                writeInstallApp(mPebbleProtocol.encodeUploadComplete(mAppInstallToken));
+                                if (++mCurrentInstallableIndex < mPebbleInstallables.length) {
+                                    mInstallState = PebbleAppInstallState.START_INSTALL;
+                                } else {
+                                    mInstallState = PebbleAppInstallState.APP_REFRESH;
+                                }
+                            }
+                            break;
+                        case INSTALL_FIRMWARE:
+                            // All firmware files are committed; now send INSTALL for each so the
+                            // watch can write them all to flash in one go.
+                            for (int token : mFirmwareCommittedTokens) {
+                                writeInstallApp(mPebbleProtocol.encodeUploadComplete(token));
+                            }
+                            mFirmwareCommittedTokens.clear();
+                            mInstallState = PebbleAppInstallState.APP_REFRESH;
+                            break;
+                        case APP_REFRESH:
+                            if (mPBWReader.isFirmware()) {
+                                writeInstallApp(mPebbleProtocol.encodeInstallFirmwareComplete());
+                            }
+                            finishInstall(false); // FIXME: don't know yet how to detect success
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                if (mIsTCP) {
+                    mInStream.skip(6);
+                }
+                int bytes = readWithException(mInStream, buffer, 0, 4);
+
+                while (bytes < 4) {
+                    bytes += readWithException(mInStream, buffer, bytes, 4 - bytes);
+                }
+
+                ByteBuffer buf = ByteBuffer.wrap(buffer);
+                buf.order(ByteOrder.BIG_ENDIAN);
+                short length = buf.getShort();
+                short endpoint = buf.getShort();
+                if (length < 0 || length > 8192) {
+                    LOG.warn("invalid length {}", length);
+                    while (mInStream.available() > 0) {
+                        readWithException(mInStream, buffer, 0, buffer.length); // read all
+                    }
+                    continue;
+                }
+
+                bytes = readWithException(mInStream, buffer, 4, length);
+                while (bytes < length) {
+                    bytes += readWithException(mInStream, buffer, bytes + 4, length - bytes);
+                }
+
+                if (mIsTCP) {
+                    mInStream.skip(2);
+                }
+
+                GBDeviceEvent[] deviceEvents = mPebbleProtocol.decodeResponse(buffer);
+                if (deviceEvents == null) {
+                    LOG.info("unhandled message to endpoint {} ({} bytes)", endpoint, length);
+                } else {
+                    for (GBDeviceEvent deviceEvent : deviceEvents) {
+                        if (deviceEvent == null) {
+                            continue;
+                        }
+                        if (!evaluateGBDeviceEventPebble(deviceEvent)) {
+                            mPebbleSupport.evaluateGBDeviceEvent(deviceEvent);
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                if (e.getMessage() != null && (e.getMessage().equals("broken pipe") || e.getMessage().contains("socket closed"))) { //FIXME: this does not feel right
+                    LOG.info(e.getMessage());
+                    mIsConnected = false;
+                    LOG.info("Bluetooth socket closed, will quit IO Thread");
+                    break;
+                }
+            }
+        }
+        mIsConnected = false;
+
+        cleanup();
+
+        enablePebbleKitSupport(false);
+
+        if (mQuit || !GBApplication.getPrefs().getAutoReconnect(getDevice())) {
+            LOG.debug("Exited read thread loop, disconnecting");
+            gbDevice.setUpdateState(GBDevice.State.NOT_CONNECTED, getContext());
+        } else {
+            LOG.debug("Exited read thread loop, will wait for reconnect");
+            gbDevice.setUpdateState(GBDevice.State.WAITING_FOR_RECONNECT, getContext());
+        }
+
+        if (((PebbleCoordinator) gbDevice.getDeviceCoordinator()).isBackgroundJsEnabled(gbDevice)) {
+            PebbleUtils.stopJsEngineForDevice(gbDevice);
+        }
+
+        gbDevice.sendDeviceUpdateIntent(getContext());
+        LOG.debug("finished thread {}", getName());
+    }
+
+    private void enablePebbleKitSupport(boolean enable) {
+        if (enable && mEnablePebblekit) {
+            mPebbleKitSupport = new PebbleKitSupport(getContext(), PebbleIoThread.this, mPebbleProtocol);
+        } else {
+            if (mPebbleKitSupport != null) {
+                mPebbleKitSupport.close();
+                mPebbleKitSupport = null;
+            }
+        }
+    }
+
+
+    private void write_stream(byte[] bytes) {
+        try {
+            if (mIsTCP) {
+                ByteBuffer buf = ByteBuffer.allocate(bytes.length + 8);
+                buf.order(ByteOrder.BIG_ENDIAN);
+                buf.putShort((short) 0xfeed);
+                buf.putShort((short) 1);
+                buf.putShort((short) bytes.length);
+                buf.put(bytes);
+                buf.putShort((short) 0xbeef);
+                mOutStream.write(buf.array());
+                mOutStream.flush();
+            } else {
+                mOutStream.write(bytes);
+                mOutStream.flush();
+            }
+        } catch (IOException e) {
+            LOG.error("Error writing.", e);
+        }
+    }
+
+    private void write_real(byte[] bytes) {
+        write_stream(bytes);
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException ignored) {
+        }
+    }
+
+    @Override
+    synchronized public void write(byte[] bytes) {
+        if (bytes == null) {
+            return;
+        }
+
+        if (!mIsConnected) {
+            return;
+        }
+        write_real(bytes);
+    }
+
+    // FIXME: parts are supposed to be generic code
+    private boolean evaluateGBDeviceEventPebble(GBDeviceEvent deviceEvent) {
+
+        if (deviceEvent instanceof GBDeviceEventFirmwareUpdateStart) {
+            mFirmwareStartStatus = ((GBDeviceEventFirmwareUpdateStart) deviceEvent).status;
+            LOG.info("Got FirmwareUpdateStartResponse: status={}", mFirmwareStartStatus);
+            return true;
+        } else if (deviceEvent instanceof GBDeviceEventVersionInfo) {
+            if (prefs.syncTime()) {
+                LOG.info("syncing time");
+                write(mPebbleProtocol.encodeSetTime());
+            }
+            write(mPebbleProtocol.encodeEnableAppLogs(devicePrefs.getBoolean("pebble_enable_applogs", false)));
+            write(mPebbleProtocol.encodeReportDataLogSessions());
+            gbDevice.setState(GBDevice.State.INITIALIZED);
+            if (mPebbleLESupport != null) {
+                mPebbleLESupport.readBatteryCharacteristic();
+            }
+            return false;
+        } else if (deviceEvent instanceof GBDeviceEventAppManagement) {
+            GBDeviceEventAppManagement appMgmt = (GBDeviceEventAppManagement) deviceEvent;
+            switch (appMgmt.type) {
+                case DELETE:
+                    // right now on the Pebble we also receive this on a failed/successful installation ;/
+                    switch (appMgmt.event) {
+                        case FAILURE:
+                            if (mIsInstalling) {
+                                if (mInstallState == PebbleAppInstallState.WAIT_SLOT) {
+                                    // get the free slot
+                                    writeInstallApp(mPebbleProtocol.encodeAppInfoReq());
+                                } else {
+                                    finishInstall(true);
+                                }
+                            } else {
+                                LOG.info("failure removing app");
+                            }
+                            break;
+                        case SUCCESS:
+                            if (mIsInstalling) {
+                                if (mInstallState == PebbleAppInstallState.WAIT_SLOT) {
+                                    // get the free slot
+                                    writeInstallApp(mPebbleProtocol.encodeAppInfoReq());
+                                } else {
+                                    finishInstall(false);
+                                    // refresh app list
+                                    write(mPebbleProtocol.encodeAppInfoReq());
+                                }
+                            } else {
+                                LOG.info("successfully removed app");
+                                write(mPebbleProtocol.encodeAppInfoReq());
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                case INSTALL:
+                    switch (appMgmt.event) {
+                        case FAILURE:
+                            LOG.info("failure installing app"); // TODO: report to Installer
+                            finishInstall(true);
+                            break;
+                        case SUCCESS:
+                            setToken(appMgmt.token);
+                            break;
+                        case REQUEST:
+                            LOG.info("APPFETCH request: {} / {}", appMgmt.uuid, appMgmt.token);
+                            try {
+                                installApp(Uri.fromFile(new File(PebbleUtils.getPbwCacheDir(),appMgmt.uuid.toString() + ".pbw")), appMgmt.token);
+                            } catch (IOException e) {
+                                LOG.error("Error installing app", e);
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                case START:
+                    LOG.info("got GBDeviceEventAppManagement START event for uuid: {}", appMgmt.uuid);
+                    if (((PebbleCoordinator) gbDevice.getDeviceCoordinator()).isBackgroundJsEnabled(gbDevice)) {
+                        if (mPebbleProtocol.hasAppMessageHandler(appMgmt.uuid)) {
+                            PebbleUtils.stopJsEngineForDevice(gbDevice);
+                        } else {
+                            PebbleUtils.startJsEngineForDevice(getContext(), gbDevice, appMgmt.uuid);
+                        }
+                    }
+
+                    mPebbleActiveAppTracker.markAppOpened(appMgmt.uuid);
+                    break;
+                case STOP:
+                    mPebbleActiveAppTracker.markAppClosed(appMgmt.uuid);
+                    break;
+                default:
+                    break;
+            }
+            return true;
+        } else if (deviceEvent instanceof GBDeviceEventAppInfo) {
+            LOG.info("Got event for APP_INFO");
+            GBDeviceEventAppInfo appInfoEvent = (GBDeviceEventAppInfo) deviceEvent;
+            setInstallSlot(appInfoEvent.freeSlot);
+            return false;
+        } else if (deviceEvent instanceof GBDeviceEventAppMessage) {
+            if (((PebbleCoordinator) gbDevice.getDeviceCoordinator()).isBackgroundJsEnabled(gbDevice)) {
+                sendAppMessageJS((GBDeviceEventAppMessage) deviceEvent);
+            }
+            if (mEnablePebblekit) {
+                LOG.info("Got AppMessage event");
+                if (mPebbleKitSupport != null && ((GBDeviceEventAppMessage) deviceEvent).type == GBDeviceEventAppMessage.TYPE_APPMESSAGE) {
+                    mPebbleKitSupport.sendAppMessageIntent((GBDeviceEventAppMessage) deviceEvent);
+                }
+            }
+        } else if (deviceEvent instanceof GBDeviceEventDataLogging) {
+            if (mEnablePebblekit) {
+                LOG.info("Got Datalogging event");
+                if (mPebbleKitSupport != null) {
+                    mPebbleKitSupport.sendDataLoggingIntent((GBDeviceEventDataLogging) deviceEvent);
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private void setToken(int token) {
+        mAppInstallToken = token;
+    }
+
+    private void setInstallSlot(int slot) {
+        if (mIsInstalling) {
+            mInstallSlot = slot;
+        }
+    }
+
+    synchronized private void writeInstallApp(byte[] bytes) {
+        if (!mIsInstalling) {
+            return;
+        }
+        LOG.info("got {}bytes for writeInstallApp()", bytes.length);
+        // Bypass the 100ms post-write sleep in write_real — that sleep prevents appmessage
+        // NACKs on firmware 3.0+ and is not relevant here. IoThread's blocking read is woken
+        // immediately when the watch responds, via notifyAll() in writeToPipedOutputStream.
+        write_stream(bytes);
+    }
+
+    void installApp(Uri uri, int appId) {
+        if (mIsInstalling) {
+            return;
+        }
+
+        String platformName = PebbleHardware.getPlatformName(gbDevice.getModel());
+        Integer targetSlot = (Integer) gbDevice.getExtraInfo(GBDeviceEventVersionInfo.EXTRA_FW_UPDATE_TARGET_SLOT);
+
+        try {
+            mPBWReader = new PBWReader(uri, getContext(), platformName, targetSlot);
+        } catch (FileNotFoundException e) {
+            LOG.warn("app file not found", e);
+            return;
+        } catch (IOException e) {
+            LOG.warn("unable to read file", e);
+            return;
+        }
+
+        mPebbleInstallables = mPBWReader.getPebbleInstallables();
+        mCurrentInstallableIndex = 0;
+
+        if (mPBWReader.isFirmware()) {
+            LOG.info("starting firmware installation");
+            mIsInstalling = true;
+            // For dual-slot watches, mInstallSlot is the PUTBYTES bank number (0 or 1).
+            // It must match the inactive slot so we don't write into the running firmware.
+            mInstallSlot = (targetSlot != null) ? targetSlot : 0;
+            int totalFirmwareBytes = 0;
+            for (PebbleInstallable pi : mPebbleInstallables) {
+                totalFirmwareBytes += pi.getFileSize();
+            }
+            writeInstallApp(mPebbleProtocol.encodeInstallFirmwareStart(totalFirmwareBytes));
+            mFirmwareStartStatus = -1;
+            mFirmwareStartTimestamp = System.currentTimeMillis();
+            mInstallState = PebbleAppInstallState.WAIT_FIRMWARE_START;
+            // GetTime is sent to ensure the blocking read unblocks in recovery mode, where the
+            // watch never sends FirmwareUpdateStartResponse. In normal mode the watch's response
+            // will arrive first and set mFirmwareStartStatus; the GetTime response is then handled
+            // on the next loop iteration.
+            writeInstallApp(mPebbleProtocol.encodeGetTime());
+        } else {
+            mCurrentlyInstallingApp = mPBWReader.getGBDeviceApp();
+            if (!mPBWReader.isLanguage()) {
+                if (appId == 0) {
+                    // only install metadata - not the binaries
+                    write(mPebbleProtocol.encodeInstallMetadata(mCurrentlyInstallingApp.getUUID(), mCurrentlyInstallingApp.getName(), mPBWReader.getAppVersion(), mPBWReader.getSdkVersion(), mPBWReader.getFlags(), mPBWReader.getIconId()));
+                    write(mPebbleProtocol.encodeAppStart(mCurrentlyInstallingApp.getUUID(), true));
+                } else {
+                    // this came from an app fetch request, so do the real stuff
+                    mIsInstalling = true;
+                    mInstallSlot = appId;
+                    mInstallState = PebbleAppInstallState.START_INSTALL;
+
+                    writeInstallApp(mPebbleProtocol.encodeAppFetchAck());
+                }
+            } else {
+                mIsInstalling = true;
+                if (mPBWReader.isLanguage()) {
+                    mInstallSlot = 0;
+                    mInstallState = PebbleAppInstallState.START_INSTALL;
+
+                    // unblock HACK
+                    writeInstallApp(mPebbleProtocol.encodeGetTime());
+                } else {
+                    mInstallState = PebbleAppInstallState.WAIT_SLOT;
+                    writeInstallApp(mPebbleProtocol.encodeAppDelete(mCurrentlyInstallingApp.getUUID()));
+                }
+            }
+        }
+    }
+
+    void reopenLastApp(@NonNull UUID assumedCurrentApp) {
+        UUID currentApp = mPebbleActiveAppTracker.getCurrentRunningApp();
+        UUID previousApp = mPebbleActiveAppTracker.getPreviousRunningApp();
+
+        if (previousApp == null || !assumedCurrentApp.equals(currentApp)) {
+            write(mPebbleProtocol.encodeAppStart(assumedCurrentApp, false));
+        } else {
+            write(mPebbleProtocol.encodeAppStart(previousApp, true));
+        }
+    }
+
+    private void finishInstall(boolean hadError) {
+        if (!mIsInstalling) {
+            return;
+        }
+        if (hadError) {
+            GB.updateInstallNotification(getContext().getString(R.string.installation_failed_), false, 0, getContext());
+        } else {
+            GB.updateInstallNotification(getContext().getString(R.string.installation_successful), false, 0, getContext());
+
+            String filenameSuffix;
+            if (mCurrentlyInstallingApp != null) {
+                if (mCurrentlyInstallingApp.getType() == GBDeviceApp.Type.WATCHFACE) {
+                    filenameSuffix = ".watchfaces";
+                } else {
+                    filenameSuffix = ".watchapps";
+                }
+                AppManagerActivity.addToAppOrderFile(gbDevice.getAddress() + filenameSuffix, mCurrentlyInstallingApp.getUUID());
+                Intent refreshIntent = new Intent(AbstractAppManagerFragment.ACTION_REFRESH_APPLIST);
+                LocalBroadcastManager.getInstance(getContext()).sendBroadcast(refreshIntent);
+            }
+
+        }
+        mInstallState = PebbleAppInstallState.UNKNOWN;
+
+        if (hadError && mAppInstallToken != -1) {
+            writeInstallApp(mPebbleProtocol.encodeUploadCancel(mAppInstallToken));
+        }
+
+        mPBWReader = null;
+        mIsInstalling = false;
+        mCurrentlyInstallingApp = null;
+        mFirmwareCommittedTokens.clear();
+        mFirmwareStartStatus = -1;
+        mFirmwareStartTimestamp = 0;
+
+        if (mFis != null) {
+            try {
+                mFis.close();
+            } catch (IOException e) {
+                // ignore
+            }
+        }
+        mFis = null;
+        mAppInstallToken = -1;
+        mInstallSlot = -2;
+    }
+
+    public void readBatteryCharacteristic() {
+        if (mPebbleLESupport != null) {
+            mPebbleLESupport.readBatteryCharacteristic();
+        }
+    }
+
+    @Override
+    public void quit() {
+        mQuit = true;
+        cleanup();
+    }
+
+    private void cleanup() {
+        if (mOutStream != null) {
+            try {
+                mOutStream.close();
+            } catch (final Exception ignored) {
+            }
+            mOutStream = null;
+        }
+
+        if (mInStream != null) {
+            try {
+                mInStream.close();
+            } catch (final Exception ignored) {
+            }
+            mInStream = null;
+        }
+
+        if (mBtSocket != null) {
+            try {
+                mBtSocket.close();
+            } catch (final IOException ignored) {
+            }
+            mBtSocket = null;
+        }
+
+        if (mTCPSocket != null) {
+            try {
+                mTCPSocket.close();
+            } catch (IOException ignored) {
+            }
+            mTCPSocket = null;
+        }
+
+        if (mPebbleLESupport != null) {
+            try {
+                mPebbleLESupport.close();
+            } catch (Exception ignored) {
+            }
+            mPebbleLESupport = null;
+        }
+    }
+
+    private enum PebbleAppInstallState {
+        UNKNOWN,
+        WAIT_FIRMWARE_START, // waiting for FirmwareUpdateStartResponse from watch (or 5s timeout for recovery mode)
+        WAIT_SLOT,
+        START_INSTALL,
+        WAIT_TOKEN,
+        UPLOAD_CHUNK,
+        UPLOAD_COMMIT,
+        WAIT_COMMIT,
+        UPLOAD_COMPLETE,
+        INSTALL_FIRMWARE, // send INSTALL for all committed firmware tokens after all files are transferred
+        APP_REFRESH,
+    }
+}

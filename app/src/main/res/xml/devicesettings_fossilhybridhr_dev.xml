@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="dangerous_external_intents"
+        android:layout="@layout/preference_checkbox"
+        android:title="@string/qhybrid_pref_title_external_intents"
+        android:summary="@string/qhybrid_pref_summary_external_intents"
+        android:icon="@drawable/ic_warning_gray"/>
+
+    <Preference
+        android:title="@string/qhybrid_title_file_management"
+        android:summary="@string/qhybrid_summary_file_management"
+        android:icon="@drawable/ic_file_upload">
+        <intent
+            android:targetPackage="@string/applicationId"
+            android:targetClass="nodomain.freeyourgadget.gadgetbridge.devices.qhybrid.FileManagementActivity" />
+    </Preference>
+
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="enable_on_device_confirmation"
+        android:layout="@layout/preference_checkbox"
+        android:title="@string/qhybrid_title_on_device_confirmation"
+        android:summary="@string/qhybrid_summary_on_device_confirmation"
+        android:icon="@drawable/ic_vpn_key"/>
+
+    <EditTextPreference
+        android:key="voice_service_package"
+        android:title="@string/voice_service_package_title"
+        android:summary="@string/voice_service_package_summary"
+        android:icon="@drawable/ic_voice"
+        app:useSimpleSummaryProvider="true" />
+
+    <EditTextPreference
+        android:key="voice_service_class"
+        android:title="@string/voice_service_class_title"
+        android:summary="@string/voice_service_class_summary"
+        android:icon="@drawable/ic_voice"
+        app:useSimpleSummaryProvider="true" />
+
+    <EditTextPreference
+        android:key="calendar_sync_events_amount"
+        android:title="@string/pref_calendar_amount_events_to_sync_title"
+        android:icon="@drawable/ic_calendar_sync"
+        android:defaultValue="5"
+        android:inputType="number"
+        app:useSimpleSummaryProvider="true" />
+    <EditTextPreference
+        android:key="calendar_sync_event_title_length"
+        android:title="@string/pref_calendar_maximum_title_characters_title"
+        android:icon="@drawable/ic_calendar_sync"
+        android:defaultValue="40"
+        android:inputType="number"
+        app:useSimpleSummaryProvider="true" />
+    <EditTextPreference
+        android:key="calendar_sync_event_desc_length"
+        android:title="@string/pref_calendar_maximum_description_characters_title"
+        android:icon="@drawable/ic_calendar_sync"
+        android:defaultValue="40"
+        android:inputType="number"
+        app:useSimpleSummaryProvider="true" />
+    <EditTextPreference
+        android:key="calendar_sync_target_app"
+        android:title="@string/pref_calendar_target_app_title"
+        android:icon="@drawable/ic_calendar_sync"
+        android:defaultValue="calendarApp"
+        app:useSimpleSummaryProvider="true" />
+</androidx.preference.PreferenceScreen>

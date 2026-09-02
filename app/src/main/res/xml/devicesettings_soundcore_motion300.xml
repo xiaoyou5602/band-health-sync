@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:icon="@drawable/ic_voice"
+        android:key="pref_soundcore_voice_prompts"
+        android:layout="@layout/preference_checkbox"
+        android:title="@string/soundcore_voice_prompts" />
+    <ListPreference
+        android:defaultValue="70"
+        android:entries="@array/soundcore_button_brightness_names"
+        android:entryValues="@array/soundcore_button_brightness_values"
+        android:icon="@drawable/ic_wb_sunny"
+        android:key="pref_soundcore_button_brightness"
+        app:useSimpleSummaryProvider="true"
+        android:title="@string/soundcore_button_brightness" />
+    <ListPreference
+        android:defaultValue="3"
+        android:entries="@array/soundcore_motion_auto_power_off_names"
+        android:entryValues="@array/soundcore_auto_power_off_values"
+        android:icon="@drawable/ic_power_settings_new"
+        android:key="pref_soundcore_auto_power_off"
+        app:useSimpleSummaryProvider="true"
+        android:title="@string/prefs_wena3_auto_power_off_item" />
+</androidx.preference.PreferenceScreen>

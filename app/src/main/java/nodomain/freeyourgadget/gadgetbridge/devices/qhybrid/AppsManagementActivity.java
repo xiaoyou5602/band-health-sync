@@ -1,0 +1,163 @@
+/*  Copyright (C) 2021-2024 Daniel Dakhno, Hasan Ammar
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.devices.qhybrid;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
+import android.widget.PopupMenu;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+
+import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.activities.AbstractGBActivity;
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.model.DeviceType;
+import nodomain.freeyourgadget.gadgetbridge.model.ItemWithDetails;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.QHybridSupport;
+import nodomain.freeyourgadget.gadgetbridge.util.GB;
+
+public class AppsManagementActivity extends AbstractGBActivity {
+    private GBDevice device;
+    ListView appsListView;
+    String[] appNames;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_qhybrid_apps_management);
+
+        device = getIntent().getParcelableExtra(GBDevice.EXTRA_DEVICE);
+        if (device == null || !device.isInitialized()) {
+            GB.toast(this, getString(R.string.watch_not_connected), Toast.LENGTH_LONG, GB.ERROR);
+            finish();
+            return;
+        }
+
+        initViews();
+        refreshInstalledApps();
+    }
+
+    private void toast(String data) {
+        GB.toast(data, Toast.LENGTH_LONG, GB.INFO);
+    }
+
+    private void refreshInstalledApps() {
+        try {
+                if (
+                        device.getType() == DeviceType.FOSSILQHYBRID &&
+                                device.isConnected() &&
+                                device.getModel() != null &&
+                                (device.getModel().startsWith("DN") || device.getModel().startsWith("IV")) &&
+                                device.getState() == GBDevice.State.INITIALIZED
+                ) {
+                    ItemWithDetails installedAppsJson = device.getDeviceInfo("INSTALLED_APPS");
+                    if (installedAppsJson == null || installedAppsJson.getDetails().isEmpty()) {
+                        throw new RuntimeException("can't get installed apps");
+                    }
+                    JSONArray apps = new JSONArray(installedAppsJson);
+                    appNames = new String[apps.length()];
+                    for (int i = 0; i < apps.length(); i++) {
+                        appNames[i] = apps.getString(i);
+                    }
+                    appsListView.setAdapter(new AppsListAdapter(this, appNames));
+                } else {
+                    throw new RuntimeException("Device not connected");
+                }
+        } catch (JSONException e) {
+            toast(e.getLocalizedMessage());
+            finish();
+        }
+    }
+
+    static class AppsListAdapter extends ArrayAdapter<String> {
+        public AppsListAdapter(@NonNull Context context, @NonNull String[] objects) {
+            super(context, 0, objects);
+        }
+
+        @NonNull
+        @Override
+        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+            if (convertView == null) {
+                LayoutInflater inflater = (LayoutInflater.from(getContext()));
+                convertView = inflater.inflate(R.layout.fossil_hr_row_installed_app, null);
+            }
+            TextView nameView = convertView.findViewById(R.id.fossil_hr_row_app_name);
+            nameView.setText(getItem(position));
+            return nameView;
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(deviceUpdateReceiver);
+        finish();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        LocalBroadcastManager.getInstance(this).registerReceiver(deviceUpdateReceiver, new IntentFilter(GBDevice.ACTION_DEVICE_CHANGED));
+    }
+
+    BroadcastReceiver deviceUpdateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            refreshInstalledApps();
+        }
+    };
+
+    private void initViews() {
+        appsListView = findViewById(R.id.qhybrid_apps_list);
+        appsListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
+                PopupMenu menu = new PopupMenu(AppsManagementActivity.this, view);
+                menu.getMenu()
+                        .add("uninstall")
+                        .setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
+                            @Override
+                            public boolean onMenuItemClick(MenuItem item) {
+                                Intent intent = new Intent(QHybridSupport.QHYBRID_COMMAND_UNINSTALL_APP);
+                                intent.putExtra(GBDevice.EXTRA_DEVICE, device);
+                                intent.putExtra("EXTRA_APP_NAME", appNames[position]);
+                                LocalBroadcastManager.getInstance(AppsManagementActivity.this).sendBroadcast(intent);
+                                return true;
+                            }
+                        });
+                menu.show();
+            }
+        });
+    }
+}

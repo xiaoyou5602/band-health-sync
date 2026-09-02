@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <com.mobeta.android.dslv.DragSortListPreference
+        android:icon="@drawable/ic_widgets"
+        android:defaultValue="@array/pref_amazfitband5_display_items_default"
+        android:dialogTitle="@string/mi2_prefs_display_items"
+        android:entries="@array/pref_amazfitband5_display_items"
+        android:entryValues="@array/pref_amazfitband5_display_items_values"
+        android:key="display_items_sortable"
+        android:persistent="true"
+        android:summary="@string/mi2_prefs_display_items_summary"
+        android:title="@string/mi2_prefs_display_items" />
+    <com.mobeta.android.dslv.DragSortListPreference
+        android:icon="@drawable/ic_shortcut"
+        android:defaultValue="@array/pref_amazfitband5_shortcuts_default"
+        android:dialogTitle="@string/bip_prefs_shortcuts"
+        android:entries="@array/pref_amazfitband5_shortcuts"
+        android:entryValues="@array/pref_amazfitband5_shortcuts_values"
+        android:key="shortcuts_sortable"
+        android:persistent="true"
+        android:summary="@string/bip_prefs_shotcuts_summary"
+        android:title="@string/bip_prefs_shortcuts" />
+    <com.mobeta.android.dslv.DragSortListPreference
+        android:icon="@drawable/ic_activity_unknown_small"
+        android:defaultValue="@array/pref_miband5_workout_activity_types_default"
+        android:dialogTitle="@string/mi5_prefs_workout_activity_types"
+        android:entries="@array/pref_miband5_workout_activity_types"
+        android:entryValues="@array/pref_miband5_workout_activity_types_values"
+        android:key="workout_activity_types_sortable"
+        android:persistent="true"
+        android:summary="@string/mi5_prefs_workout_activity_types_summary"
+        android:title="@string/mi5_prefs_workout_activity_types" />
+</androidx.preference.PreferenceScreen>

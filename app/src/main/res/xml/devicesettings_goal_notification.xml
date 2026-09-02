@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:icon="@drawable/ic_star_gray"
+        android:key="fitness_goal_notification"
+        android:layout="@layout/preference_checkbox"
+        android:summary="@string/mi2_prefs_goal_notification_summary"
+        android:title="@string/mi2_prefs_goal_notification" />
+</androidx.preference.PreferenceScreen>

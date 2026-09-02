@@ -1,0 +1,313 @@
+/*  Copyright (C) 2023-2024 José Rebelo, Yoran Vulker
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity;
+
+import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+
+import androidx.annotation.Nullable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.PriorityQueue;
+import java.util.Queue;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.database.DBHandler;
+import nodomain.freeyourgadget.gadgetbridge.database.DBHelper;
+import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession;
+import nodomain.freeyourgadget.gadgetbridge.entities.Device;
+import nodomain.freeyourgadget.gadgetbridge.entities.XiaomiActivityFile;
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.BLETypeConversions;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiPreferences;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.XiaomiSupport;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.services.XiaomiHealthService;
+import nodomain.freeyourgadget.gadgetbridge.util.CheckSums;
+import nodomain.freeyourgadget.gadgetbridge.util.GB;
+
+public class XiaomiActivityFileFetcher {
+    private static final Logger LOG = LoggerFactory.getLogger(XiaomiActivityFileFetcher.class);
+
+    private final XiaomiHealthService mHealthService;
+
+    private final Queue<XiaomiActivityFileId> mFetchQueue = new PriorityQueue<>();
+    private ByteArrayOutputStream mBuffer = new ByteArrayOutputStream();
+    private boolean isFetching = false;
+    private volatile boolean awaitingPastResponse = false;
+    private final AtomicBoolean queueHeld = new AtomicBoolean(false);
+
+    private final Handler timeoutHandler = new Handler(Looper.getMainLooper());
+
+    public XiaomiActivityFileFetcher(final XiaomiHealthService healthService) {
+        this.mHealthService = healthService;
+    }
+
+    public void dispose() {
+        clearTimeout();
+        awaitingPastResponse = false;
+        queueHeld.set(false);
+    }
+
+    private void clearTimeout() {
+        this.timeoutHandler.removeCallbacksAndMessages(null);
+    }
+
+    private void setTimeout() {
+        // #4305 - Set the timeout in case the watch does not send the file
+        this.timeoutHandler.postDelayed(() -> {
+            LOG.warn("Timed out waiting for activity file with {} bytes in the buffer", mBuffer.size());
+            awaitingPastResponse = false;
+            triggerNextFetch();
+        }, 5000L);
+    }
+
+    public void addChunk(final byte[] chunk) {
+        clearTimeout();
+
+        final int total = BLETypeConversions.toUint16(chunk, 0);
+        final int num = BLETypeConversions.toUint16(chunk, 2);
+
+        if (num == 1) {
+            // reset buffer
+            mBuffer = new ByteArrayOutputStream();
+        }
+
+        LOG.debug("Got activity chunk {}/{}", num, total);
+
+        mBuffer.write(chunk, 4, chunk.length - 4);
+
+        if (num != total) {
+            setTimeout();
+            return;
+        }
+
+        final byte[] data = mBuffer.toByteArray();
+        mBuffer = new ByteArrayOutputStream();
+
+        if (data.length < 13) {
+            LOG.warn("Activity data length of {} is too short", data.length);
+            // FIXME this may mess up the order.. maybe we should just abort
+            triggerNextFetch();
+            return;
+        }
+
+        final int arrCrc32 = CheckSums.getCRC32(data, 0, data.length - 4);
+        final int expectedCrc32 = BLETypeConversions.toUint32(data, data.length - 4);
+
+        if (arrCrc32 != expectedCrc32) {
+            LOG.warn(
+                    "Invalid activity data checksum: got {}, expected {}",
+                    String.format("%08X", arrCrc32),
+                    String.format("%08X", expectedCrc32)
+            );
+            // FIXME this may mess up the order.. maybe we should just abort
+            triggerNextFetch();
+            return;
+        }
+
+        if (data[7] != 0) {
+            LOG.warn(
+                    "Unexpected activity payload byte {} at position 7 - parsing might fail",
+                    String.format("0x%02X", data[7])
+            );
+        }
+
+        final byte[] fileIdBytes = Arrays.copyOfRange(data, 0, 7);
+        final XiaomiActivityFileId fileId = XiaomiActivityFileId.from(fileIdBytes);
+
+        dumpBytesToExternalStorage(fileId, data);
+
+        if (!XiaomiPreferences.keepActivityDataOnDevice(mHealthService.getSupport().getDevice())) {
+            LOG.debug("Acking recorded data {}", fileId);
+            // TODO is this too early?
+            mHealthService.ackRecordedData(fileId);
+        }
+
+        final XiaomiActivityParser activityParser = XiaomiActivityParser.create(fileId);
+        if (activityParser == null) {
+            LOG.warn("Failed to find parser for {}", fileId);
+            triggerNextFetch();
+            return;
+        }
+
+        try {
+            if (activityParser.parse(mHealthService.getSupport().getContext(), mHealthService.getSupport().getDevice(), fileId, data)) {
+                LOG.info("Successfully parsed {}", fileId);
+            } else if (data != null && data.length <= 16) {
+                // Indoor / no-fix placeholder (13-byte GPS_TRACK shell) — parser already logged
+                // the no-samples reason. Avoid the WARN-level "Failed to parse".
+                LOG.info("Skipped empty placeholder {}", fileId);
+            } else {
+                LOG.warn("Failed to parse {}", fileId);
+            }
+        } catch (final Exception ex) {
+            LOG.error("Exception while parsing {}", fileId, ex);
+        }
+
+        triggerNextFetch();
+    }
+
+    public void setAwaitingPastResponse(final boolean awaiting) {
+        this.awaitingPastResponse = awaiting;
+    }
+
+    public void signalComplete() {
+        LOG.debug("Nothing more to fetch");
+        final boolean wasFetching = isFetching;
+        isFetching = false;
+        queueHeld.set(false);
+        if (wasFetching) {
+            mHealthService.getSupport().getDevice().unsetBusyTask();
+            GB.signalActivityDataFinish(mHealthService.getSupport().getDevice());
+            GB.updateTransferNotification(null, "", false, 100, mHealthService.getSupport().getContext());
+            mHealthService.getSupport().getDevice().sendDeviceUpdateIntent(mHealthService.getSupport().getContext());
+        }
+    }
+
+    public void resumeFetching() {
+        if (queueHeld.compareAndSet(true, false)) {
+            triggerNextFetch();
+        }
+    }
+
+    public void fetch(final List<XiaomiActivityFileId> fileIds) {
+        // #4305 - ensure unique files
+        for (final XiaomiActivityFileId fileId : fileIds) {
+            if (!mFetchQueue.contains(fileId)) {
+                mFetchQueue.add(fileId);
+            } else {
+                LOG.warn("Ignoring duplicated file {}", fileId);
+            }
+        }
+
+        if (!isFetching) {
+            // Currently not fetching anything, fetch the next
+            isFetching = true;
+            final XiaomiSupport support = mHealthService.getSupport();
+            final Context context = support.getContext();
+            GB.updateTransferNotification(context.getString(R.string.busy_task_fetch_activity_data), "", true, 0, context);
+            support.getDevice().setBusyTask(R.string.busy_task_fetch_activity_data, context);
+            support.getDevice().sendDeviceUpdateIntent(support.getContext());
+            triggerNextFetch();
+        }
+    }
+
+    private void triggerNextFetch() {
+        clearTimeout();
+        mBuffer = new ByteArrayOutputStream();
+
+        final XiaomiActivityFileId fileId = mFetchQueue.poll();
+
+        if (fileId == null) {
+            if (awaitingPastResponse) {
+                LOG.debug("Queue empty but awaiting past fetch response, holding signal");
+                queueHeld.set(true);
+                return;
+            }
+            signalComplete();
+            return;
+        }
+
+        LOG.debug("Triggering next fetch for: {}", fileId);
+
+        setTimeout();
+
+        mHealthService.requestRecordedData(fileId);
+    }
+
+    @Nullable
+    public static File getRawFile(final GBDevice device, final XiaomiActivityFileId fileId) {
+        try {
+            final File exportDirectory = device.getDeviceCoordinator().getWritableExportDirectory(device, true);
+            final File targetDir = new File(exportDirectory, "rawFetchOperations");
+            final File outputFile = fileId.getOutputFile(targetDir);
+            if (!outputFile.isFile()) {
+                LOG.warn("Raw bytes not a file: {}", outputFile.getAbsolutePath());
+            }
+            return outputFile;
+        } catch (final Exception e) {
+            LOG.error("Failed to build path to raw bytes", e);
+        }
+        return null;
+    }
+
+    protected void dumpBytesToExternalStorage(final XiaomiActivityFileId fileId, final byte[] bytes) {
+        try {
+            final File outputFile = getRawFile(mHealthService.getSupport().getDevice(), fileId);
+            if (outputFile == null) {
+                throw new IOException("Failed to get output file");
+            }
+            final File parentFile = outputFile.getParentFile();
+            if (parentFile != null) {
+                //noinspection ResultOfMethodCallIgnored
+                parentFile.mkdirs();
+            }
+
+            final OutputStream outputStream = new FileOutputStream(outputFile);
+            outputStream.write(bytes);
+            outputStream.close();
+
+            registerActivityFile(mHealthService.getSupport().getDevice(), fileId, outputFile);
+        } catch (final Exception e) {
+            LOG.error("Failed to dump bytes to storage", e);
+        }
+    }
+
+    /**
+     * Insert / update the XIAOMI_ACTIVITY_FILE row pointing at the on-disk raw bytes.
+     * Called from both initial fetch (dump) and dev-options reprocess so registry stays
+     * in sync with what's on disk after DB import / restore.
+     */
+    public static void registerActivityFile(final GBDevice gbDevice,
+                                            final XiaomiActivityFileId fileId,
+                                            final File outputFile) {
+        final Date ts = fileId.getTimestamp();
+        if (ts == null) {
+            LOG.warn("Skipping activity file registration - null timestamp for {}", fileId);
+            return;
+        }
+        try (DBHandler dbh = GBApplication.acquireDB()) {
+            final DaoSession session = dbh.getDaoSession();
+            final Device dbDevice = DBHelper.getDevice(gbDevice, session);
+            final XiaomiActivityFile entry = new XiaomiActivityFile();
+            entry.setDeviceId(dbDevice.getId());
+            entry.setTimestamp(ts.getTime() / 1000L);
+            entry.setType(fileId.getTypeCode());
+            entry.setSubtype(fileId.getSubtypeCode());
+            entry.setDetailType(fileId.getDetailTypeCode());
+            entry.setTimezone(fileId.getTimezone());
+            entry.setVersion(fileId.getVersion());
+            entry.setFilePath(outputFile.getAbsolutePath());
+            session.getXiaomiActivityFileDao().insertOrReplace(entry);
+        } catch (final Exception e) {
+            LOG.warn("Failed to register XiaomiActivityFile row for {}", fileId, e);
+        }
+    }
+}

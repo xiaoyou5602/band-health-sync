@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <PreferenceScreen
+        android:icon="@drawable/ic_heartrate"
+        android:key="pref_screen_heartrate_monitoring"
+        android:persistent="false"
+        android:summary="@string/mi2_prefs_heart_rate_monitoring_alerts_summary"
+        android:title="@string/mi2_prefs_heart_rate_monitoring">
+
+        <PreferenceCategory
+            android:key="pref_key_header_heartrate_sleep"
+            android:title="@string/pref_header_heartrate_sleep">
+
+            <SwitchPreferenceCompat
+                android:defaultValue="false"
+                android:icon="@drawable/ic_activity_sleep"
+                android:key="heartrate_sleep_detection"
+                android:layout="@layout/preference_checkbox"
+                android:title="@string/miband_prefs_hr_sleep_detection" />
+
+            <SwitchPreferenceCompat
+                android:defaultValue="false"
+                android:icon="@drawable/ic_activity_sleep"
+                android:key="heartrate_sleep_breathing_quality_monitoring"
+                android:layout="@layout/preference_checkbox"
+                android:title="@string/pref_sleep_breathing_quality_monitoring" />
+        </PreferenceCategory>
+
+        <PreferenceCategory
+            android:key="pref_key_header_heartrate_allday"
+            android:title="@string/pref_header_heartrate_allday">
+
+            <ListPreference
+                android:defaultValue="0"
+                android:entries="@array/prefs_heartrate_measurement_interval"
+                android:entryValues="@array/prefs_heartrate_measurement_interval_values"
+                android:icon="@drawable/ic_heartrate"
+                android:key="heartrate_measurement_interval"
+                app:useSimpleSummaryProvider="true"
+                android:title="@string/prefs_title_heartrate_measurement_interval" />
+        </PreferenceCategory>
+
+        <!-- Activity Monitoring -->
+
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_activity_unknown_small"
+            android:key="heartrate_activity_monitoring"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/prefs_activity_monitoring_description"
+            android:title="@string/prefs_activity_monitoring_title" />
+
+        <!-- Heart Rate Alerts -->
+
+        <PreferenceCategory
+            android:key="pref_key_header_heartrate_alerts"
+            android:title="@string/pref_header_heartrate_alerts">
+
+            <ListPreference
+                android:defaultValue="0"
+                android:entries="@array/prefs_miband_heartrate_high_alert_threshold_with_off"
+                android:entryValues="@array/prefs_miband_heartrate_high_alert_threshold_with_off_values"
+                android:icon="@drawable/ic_heartrate"
+                android:key="heartrate_alert_threshold"
+                app:useSimpleSummaryProvider="true"
+                android:title="@string/prefs_heartrate_alert_high_threshold" />
+
+            <ListPreference
+                android:defaultValue="0"
+                android:entries="@array/prefs_miband_heartrate_low_alert_threshold"
+                android:entryValues="@array/prefs_miband_heartrate_low_alert_threshold_values"
+                android:icon="@drawable/ic_heartrate"
+                android:key="heartrate_alert_low_threshold"
+                app:useSimpleSummaryProvider="true"
+                android:title="@string/prefs_heartrate_alert_low_threshold" />
+
+            <ListPreference
+                android:defaultValue="0"
+                android:entries="@array/prefs_miband_heartrate_high_active_alert_threshold_with_off"
+                android:entryValues="@array/prefs_miband_heartrate_high_active_alert_threshold_with_off_values"
+                android:icon="@drawable/ic_heartrate"
+                android:key="heartrate_alert_active_high_threshold"
+                app:useSimpleSummaryProvider="true"
+                android:title="@string/prefs_heartrate_alert_active_high_threshold" />
+        </PreferenceCategory>
+
+        <!-- Stress Monitoring -->
+
+        <PreferenceCategory
+            android:key="pref_key_header_stress"
+            android:title="@string/pref_header_stress">
+
+            <SwitchPreferenceCompat
+                android:defaultValue="false"
+                android:icon="@drawable/ic_mood_bad"
+                android:key="heartrate_stress_monitoring"
+                android:layout="@layout/preference_checkbox"
+                android:summary="@string/prefs_stress_monitoring_description"
+                android:title="@string/prefs_stress_monitoring_title" />
+
+            <SwitchPreferenceCompat
+                android:defaultValue="false"
+                android:dependency="heartrate_stress_monitoring"
+                android:key="heartrate_stress_relaxation_reminder"
+                android:layout="@layout/preference_checkbox"
+                android:summary="@string/prefs_relaxation_reminder_description"
+                android:title="@string/prefs_relaxation_reminder_title" />
+        </PreferenceCategory>
+
+        <!-- SPO2 -->
+        <PreferenceCategory
+            android:key="pref_key_header_spo2"
+            android:title="@string/pref_header_spo2">
+
+            <SwitchPreferenceCompat
+                android:defaultValue="false"
+                android:key="spo2_all_day_monitoring_enabled"
+                android:layout="@layout/preference_checkbox"
+                android:icon="@drawable/ic_spo2"
+                android:summary="@string/prefs_spo2_monitoring_description"
+                android:title="@string/prefs_spo2_monitoring_title" />
+
+            <ListPreference
+                android:defaultValue="0"
+                android:dependency="spo2_all_day_monitoring_enabled"
+                android:entries="@array/prefs_spo2_alert_threshold"
+                android:entryValues="@array/prefs_spo2_alert_threshold_values"
+                android:key="spo2_low_alert_threshold"
+                app:useSimpleSummaryProvider="true"
+                android:icon="@drawable/ic_notifications_active"
+                android:title="@string/prefs_spo2_alert_threshold" />
+        </PreferenceCategory>
+    </PreferenceScreen>
+</androidx.preference.PreferenceScreen>

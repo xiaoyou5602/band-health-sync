@@ -1,0 +1,175 @@
+/*  Copyright (C) 2023 Daniele Gobbetti
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.service.devices.generic_bp;
+
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.content.Intent;
+import android.widget.Toast;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.List;
+
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.database.DBHandler;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventVersionInfo;
+import nodomain.freeyourgadget.gadgetbridge.devices.GenericBloodPressureSampleProvider;
+import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession;
+import nodomain.freeyourgadget.gadgetbridge.entities.GenericBloodPressureSample;
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.AbstractBTLESingleDeviceSupport;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.GattService;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.actions.SetDeviceStateAction;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.profiles.IntentListener;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.profiles.bloodpressure.BloodPressureMeasurement;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.profiles.bloodpressure.BloodPressureProfile;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.profiles.deviceinfo.DeviceInfo;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.profiles.deviceinfo.DeviceInfoProfile;
+import nodomain.freeyourgadget.gadgetbridge.util.GB;
+
+public class GenericBloodPressureSupport extends AbstractBTLESingleDeviceSupport implements IntentListener {
+    private static final Logger LOG = LoggerFactory.getLogger(GenericBloodPressureSupport.class);
+
+    private final DeviceInfoProfile<GenericBloodPressureSupport> deviceInfoProfile;
+    private final BloodPressureProfile<GenericBloodPressureSupport> bloodPressureProfile;
+
+    private int persistedMeasurements = 0;
+
+    public GenericBloodPressureSupport() {
+        super(LOG);
+
+        addSupportedService(GattService.UUID_SERVICE_BLOOD_PRESSURE);
+        addSupportedService(GattService.UUID_SERVICE_DEVICE_INFORMATION);
+
+        deviceInfoProfile = new DeviceInfoProfile<>(this);
+        deviceInfoProfile.addListener(this);
+        addSupportedProfile(deviceInfoProfile);
+
+        bloodPressureProfile = new BloodPressureProfile<>(this);
+        bloodPressureProfile.addListener(this);
+        addSupportedProfile(bloodPressureProfile);
+    }
+
+    @Override
+    public boolean useAutoConnect() {
+        return false;
+    }
+
+    @Override
+    protected TransactionBuilder initializeDevice(TransactionBuilder builder) {
+        persistedMeasurements = 0;
+
+        // mark the device as initializing
+        builder.add(new SetDeviceStateAction(getDevice(), GBDevice.State.INITIALIZING, getContext()));
+
+        // request device info
+        deviceInfoProfile.requestDeviceInfo(builder);
+
+        // enable blood pressure notifications
+        bloodPressureProfile.enableNotify(builder, true);
+
+        // mark the device as initialized
+        builder.add(new SetDeviceStateAction(getDevice(), GBDevice.State.INITIALIZED, getContext()));
+
+        return builder;
+    }
+
+    @Override
+    public void onConnectionStateChange(final BluetoothGatt gatt, final int status, final int newState) {
+        super.onConnectionStateChange(gatt, status, newState);
+        if (newState != BluetoothGatt.STATE_CONNECTED && persistedMeasurements > 0) {
+            // This particular device disconnects automatically once the transfer is finished
+            // We persist all samples as we receive them, but we need to signal that we finished the fetch
+            persistedMeasurements = 0;
+            GB.signalActivityDataFinish(getDevice());
+        }
+    }
+
+    @Override
+    public boolean onCharacteristicChanged(final BluetoothGatt gatt,
+                                           final BluetoothGattCharacteristic characteristic,
+                                           final byte[] value) {
+        if (super.onCharacteristicChanged(gatt, characteristic, value)) {
+            return true;
+        }
+
+        LOG.warn("Unhandled characteristic changed: {} {}", characteristic.getUuid(), GB.hexdump(value));
+
+        return false;
+    }
+
+    @Override
+    public void notify(final Intent intent) {
+        if (DeviceInfoProfile.ACTION_DEVICE_INFO.equals(intent.getAction())) {
+            final DeviceInfo deviceInfo = intent.getParcelableExtra(DeviceInfoProfile.EXTRA_DEVICE_INFO);
+            if (deviceInfo != null) {
+                handleDeviceInfo(deviceInfo);
+            }
+        }
+        if (BloodPressureProfile.ACTION_BLOOD_PRESSURE.equals(intent.getAction())) {
+            final BloodPressureMeasurement measurement = intent.getParcelableExtra(BloodPressureProfile.EXTRA_BLOOD_PRESSURE);
+            if (measurement != null) {
+                // If we're not marked as busy yet, do it now
+                if (!getDevice().isBusy()) {
+                    getDevice().setBusyTask(R.string.busy_task_fetch_blood_pressure_data, getContext());
+                    getDevice().sendDeviceUpdateIntent(getContext());
+                }
+
+                handleBloodPressureMeasurement(measurement);
+            }
+        }
+    }
+
+    private void handleDeviceInfo(final nodomain.freeyourgadget.gadgetbridge.service.btle.profiles.deviceinfo.DeviceInfo info) {
+        final GBDeviceEventVersionInfo versionCmd = new GBDeviceEventVersionInfo();
+        versionCmd.hwVersion = info.getHardwareRevision();
+        versionCmd.fwVersion = info.getFirmwareRevision();
+        handleGBDeviceEvent(versionCmd);
+    }
+
+    private void handleBloodPressureMeasurement(final BloodPressureMeasurement measurement) {
+        LOG.debug(
+                "Persisting blood pressure measurement at {}: {}/{}",
+                measurement.getTimestamp(),
+                measurement.getSystolicMmHg(),
+                measurement.getDiastolicMmHg()
+        );
+
+        final GenericBloodPressureSample sample = new GenericBloodPressureSample();
+        sample.setTimestamp(measurement.getTimestamp());
+        sample.setBpSystolic(measurement.getSystolicMmHg());
+        sample.setBpDiastolic(measurement.getDiastolicMmHg());
+        sample.setMeanArterialPressure(measurement.getMeanArterialPressure());
+        sample.setPulseRate(measurement.getPulseRate());
+        sample.setUserIndex(measurement.getUserId());
+        sample.setMeasurementStatus(measurement.getMeasurementStatus());
+
+        try (DBHandler handler = GBApplication.acquireDB()) {
+            final DaoSession session = handler.getDaoSession();
+            final GenericBloodPressureSampleProvider sampleProvider = new GenericBloodPressureSampleProvider(getDevice(), session);
+            sampleProvider.persistSamples(List.of(sample), getContext());
+
+            persistedMeasurements++;
+        } catch (final Exception e) {
+            GB.toast(getContext(), "Error saving blood pressure samples", Toast.LENGTH_LONG, GB.ERROR, e);
+        }
+    }
+}

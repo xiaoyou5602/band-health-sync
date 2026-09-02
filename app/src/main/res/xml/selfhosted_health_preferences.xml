@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory
+        android:key="pref_key_selfhosted_health_general"
+        android:title="@string/pref_header_general"
+        app:iconSpaceReserved="false">
+
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_arrow_upload_progress"
+            android:key="selfhosted_health_enabled"
+            android:layout="@layout/preference_checkbox"
+            android:title="@string/pref_selfhosted_health_enabled"
+            app:iconSpaceReserved="true" />
+
+        <EditTextPreference
+            android:icon="@drawable/ic_link"
+            android:inputType="textUri"
+            android:key="selfhosted_health_url"
+            android:singleLine="true"
+            android:summary="@string/pref_selfhosted_health_url_summary"
+            android:title="@string/pref_selfhosted_health_url_title"
+            app:iconSpaceReserved="true" />
+
+        <EditTextPreference
+            android:icon="@drawable/ic_password"
+            android:key="selfhosted_health_token"
+            android:singleLine="true"
+            android:title="@string/pref_selfhosted_health_token_title"
+            app:iconSpaceReserved="true" />
+
+        <Preference
+            android:icon="@drawable/ic_info"
+            android:key="selfhosted_health_notice"
+            android:selectable="false"
+            android:summary="@string/pref_selfhosted_health_notice" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="pref_key_selfhosted_health_sync"
+        android:title="@string/pref_header_sync"
+        app:iconSpaceReserved="false">
+
+        <Preference
+            android:key="selfhosted_health_status"
+            android:selectable="false"
+            android:title="@string/selfhosted_health_status_title"
+            app:iconSpaceReserved="false" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="selfhosted_health_sync_on_event"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/pref_selfhosted_health_sync_on_event_summary"
+            android:title="@string/pref_selfhosted_health_sync_on_event_title"
+            app:iconSpaceReserved="false" />
+
+        <ListPreference
+            android:defaultValue="0"
+            android:entries="@array/selfhosted_health_sync_interval"
+            android:entryValues="@array/selfhosted_health_sync_interval_values"
+            android:icon="@drawable/ic_access_time"
+            android:key="selfhosted_health_sync_interval"
+            android:title="@string/pref_selfhosted_health_sync_interval_title"
+            app:iconSpaceReserved="true"
+            app:useSimpleSummaryProvider="true" />
+
+        <Preference
+            android:icon="@drawable/ic_sync"
+            android:key="selfhosted_health_sync_now"
+            android:summary="@string/pref_selfhosted_health_sync_now_summary"
+            android:title="@string/pref_selfhosted_health_sync_now_title"
+            app:iconSpaceReserved="true" />
+
+        <Preference
+            android:icon="@drawable/ic_refresh"
+            android:key="selfhosted_health_reset_cursor"
+            android:summary="@string/pref_selfhosted_health_reset_cursor_summary"
+            android:title="@string/pref_selfhosted_health_reset_cursor_title"
+            app:iconSpaceReserved="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="pref_key_selfhosted_health_devices"
+        android:title="@string/bottom_nav_devices"
+        app:iconSpaceReserved="false">
+
+        <MultiSelectListPreference
+            android:dialogTitle="@string/pref_selfhosted_health_device_selection"
+            android:entries="@array/empty_array"
+            android:entryValues="@array/empty_array"
+            android:key="selfhosted_health_devices_multiselect"
+            android:summary="@string/pref_selfhosted_health_device_selection_summary"
+            android:title="@string/pref_selfhosted_health_device_selection"
+            app:iconSpaceReserved="false" />
+
+    </PreferenceCategory>
+
+</androidx.preference.PreferenceScreen>

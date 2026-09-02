@@ -1,0 +1,384 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+import java.nio.file.Files
+
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.parcelize)
+    alias(libs.plugins.protobuf)
+}
+
+tasks.withType(Test).configureEach {
+    systemProperty "MiFirmwareDir", System.getProperty("MiFirmwareDir", null)
+    systemProperty "logback.configurationFile", System.getProperty("user.dir", null) + "/app/src/main/assets/logback.xml"
+    systemProperty "GB_LOGFILES_DIR", Files.createTempDirectory("gblog").toString()
+}
+
+final def getVersionCode = { ->
+    try {
+        final def commitCount = providers.exec {
+            commandLine('git', 'rev-list', 'HEAD', '--count')
+        }.standardOutput.asText.get().trim()
+        return Integer.valueOf(commitCount)
+    } catch (ignored) {
+        return null
+    }
+}
+
+tasks.register("buildGitChangelog"){
+    final def changelogFile = new File("${project.rootDir}/app/build/generated/res/changelog/xml/changelog_git.xml")
+
+    inputs.file(project.rootProject.file(".git/HEAD"))
+    outputs.file(changelogFile)
+
+    doLast {
+        def allCommits
+        try {
+            allCommits = providers.exec {
+                commandLine('git', 'log', '--pretty=format:%h %s')
+            }.standardOutput.asText.get()
+        } catch (ignored) {
+            logger.warn("Skipping git changelog: git is not available")
+            changelogFile.getParentFile().mkdirs()
+            changelogFile.write(groovy.xml.XmlUtil.serialize(new Node(null, 'changelog')))
+            return
+        }
+
+        def commitVersionCode = getVersionCode()
+        def includedCommits = 0
+        def includedTranslations = 0
+        final def changelogNode = new Node(null, 'changelog')
+
+        allCommits.trim().eachLine { final line ->
+            if (includedCommits > 100) {
+                return true
+            }
+
+            final def (commitHash, commitMessage) = line.split(" ", 2)
+            if (commitMessage.contains("Translated using Weblate")) {
+                if (includedTranslations == 0) {
+                    final def releaseNode = new Node(changelogNode, 'release', [version: commitHash, versioncode: commitVersionCode--])
+                    def _ = new Node(releaseNode, 'change', [:], "Sync translations from Weblate")
+                }
+                includedTranslations++
+                return true
+            }
+
+            final def releaseNode = new Node(changelogNode, 'release', [version: commitHash, versioncode: commitVersionCode--])
+            def _ = new Node(releaseNode, 'change', [:], commitMessage)
+            includedCommits++
+        }
+
+        changelogFile.getParentFile().mkdirs()
+        changelogFile.write(groovy.xml.XmlUtil.serialize(changelogNode))
+    }
+}
+
+final def getGitHashShort = { ->
+    try {
+        return providers.exec {
+            commandLine('git', 'rev-parse', '--short', 'HEAD')
+        }.standardOutput.asText.get().trim()
+    } catch (ignored) {
+        return null
+    }
+}
+
+final def getGitDirtyFlag = { ->
+    try {
+        return providers.exec {
+            commandLine('git', 'status', '--porcelain')
+        }.standardOutput.asText.get().trim().isBlank() ? "" : " (dirty)"
+    } catch (ignored) {
+        return " (unknown status)"
+    }
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(17)
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+    }
+}
+
+android {
+    compileOptions {
+        coreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    namespace = 'nodomain.freeyourgadget.gadgetbridge'
+    compileSdk {
+        version = release(37) {
+            it.minorApiLevel = 0
+        }
+    }
+    buildToolsVersion = '37.0.0'
+
+    defaultConfig {
+        applicationId "nodomain.freeyourgadget.gadgetbridge.toge"
+
+        // Note: update toolchain.languageVersion when changing targetSdk
+        //noinspection OldTargetApi
+        targetSdk = 34
+        // Note: update sourceCompatibility and targetCompatibility when changing minSdk
+        minSdk = 23
+
+        // Note: always bump BOTH versionCode and versionName!
+        versionName "0.92.2"
+        versionCode 251
+        vectorDrawables.useSupportLibrary = true
+        buildConfigField "String", "GIT_HASH_SHORT", "\"${getGitHashShort()}\""
+        buildConfigField "String", "GIT_DIRTY_STATUS", "\"${getGitDirtyFlag()}\""
+        buildConfigField "boolean", "INTERNET_ACCESS", "false"
+
+        manifestPlaceholders = [
+            appAuthRedirectScheme: "${applicationId}"
+        ]
+    }
+
+    signingConfigs {
+        nightly {
+            if (System.getProperty("nightly_store_file") != null) {
+                storeFile file(System.getProperty("nightly_store_file"))
+                storePassword System.getProperty("nightly_store_password")
+                keyAlias System.getProperty("nightly_key_alias")
+                keyPassword System.getProperty("nightly_key_password")
+            }
+        }
+        release {
+            if (System.getProperty("release_store_file") != null) {
+                storeFile file(System.getProperty("release_store_file"))
+                storePassword System.getProperty("release_store_password")
+                keyAlias System.getProperty("release_key_alias")
+                keyPassword System.getProperty("release_key_password")
+            }
+        }
+    }
+
+    flavorDimensions += "device_type"
+    productFlavors {
+        mainline {
+            // Ensure that when starting from scratch, 'mainline' is selected, not 'banglejs'
+            getIsDefault().set(true)
+            // the default build product flavor
+            dimension "device_type"
+            //applicationIdSuffix ""
+            //versionNameSuffix ""
+        }
+
+        banglejs {
+            dimension "device_type"
+            applicationId "com.espruino.gadgetbridge"
+            applicationIdSuffix ".banglejs"
+            versionNameSuffix "-banglejs"
+            buildConfigField "boolean", "INTERNET_ACCESS", "true"
+            // Note: app/src/banglejs/AndroidManifest.xml contains some extra permissions
+        }
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs += "build/generated/sources/gbdao"
+            java.srcDirs += "build/generated/sources/fit"
+            res.srcDirs += "build/generated/res/changelog"
+        }
+        test {
+            // The optional FIT round-trip corpus (FitExporterReadmeRoundTripTest) is read
+            // by filesystem path, not the classpath, and is not committed. Exclude it from
+            // the test resources so Gradle does not copy tens of thousands of files into
+            // the unit-test runtime on every build.
+            resources {
+                exclude "FIT-test-files-main/**"
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            if (System.getProperty("release_store_file") != null) {
+                signingConfig = signingConfigs.release
+            }
+        }
+
+        nightly {
+            applicationIdSuffix ".nightly"
+            versionNameSuffix "-${getGitHashShort}"
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            minifyEnabled true
+            debuggable false
+
+            if (System.getProperty("nightly_store_file") != null) {
+                signingConfig = signingConfigs.nightly
+            } else {
+                signingConfig = signingConfigs.debug
+            }
+        }
+
+        nopebble {
+            applicationIdSuffix ".nightly_nopebble"
+            versionNameSuffix "-${getGitHashShort}"
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            minifyEnabled true
+            debuggable false
+
+            if (System.getProperty("nightly_store_file") != null) {
+                signingConfig = signingConfigs.nightly
+            } else {
+                signingConfig = signingConfigs.debug
+            }
+        }
+
+        applicationVariants.all { variant ->
+            variant.resValue "string", "applicationId", variant.applicationId
+
+            if (variant.buildType.name == 'nightly' || variant.buildType.name == 'nopebble') {
+                variant.outputs.all {
+                    setVersionCodeOverride(getVersionCode())
+                    //setVersionNameOverride(getGitHashShort())
+                    setVersionNameOverride(variant.versionName)
+                    outputFileName = "${applicationId}_${variant.versionName}.apk"
+                }
+            }
+        }
+    }
+
+    lint {
+        abortOnError = true
+        lintConfig = file("${rootDir}/app/src/main/lint.xml")
+        // If true, generate an HTML report (with issue explanations, sourcecode, etc)
+        htmlReport = true
+        // Optional path to report (default will be lint-results.html in the builddir)
+        htmlOutput = layout.buildDirectory.file("reports/lint/lint.html").get().asFile
+        // Ignore checks present in the snapshot
+        baseline = file("lint-baseline.xml")
+    }
+
+    testOptions {
+        unitTests {
+            returnDefaultValues = true
+            includeAndroidResources = true
+        }
+    }
+    buildFeatures {
+        aidl = true
+        buildConfig = true
+        viewBinding = true
+    }
+}
+
+dependencies {
+    coreLibraryDesugaring libs.desugar.jdk.libs
+
+    implementation libs.androidx.constraintlayout
+    implementation libs.bundles.androidx.camera
+
+    testImplementation libs.junit
+    testImplementation libs.mockito
+    testImplementation libs.robolectric
+    testImplementation libs.hamcrest
+
+    implementation libs.androidx.core.ktx
+    implementation platform(libs.kotlin.bom)
+    implementation libs.kotlin.stdlib
+
+    implementation libs.androidx.appcompat
+    implementation libs.androidx.preference.ktx
+    implementation libs.androidx.cardview
+    implementation libs.androidx.recyclerview
+    implementation libs.androidx.legacy.support.v4
+    implementation libs.androidx.gridlayout
+    implementation libs.androidx.palette.ktx
+    implementation libs.androidx.activity.ktx
+    implementation libs.androidx.fragment.ktx
+    implementation libs.androidx.viewpager2
+    implementation libs.androidx.work.runtime.ktx
+    implementation libs.androidx.lifecycle.process
+    implementation libs.androidx.security.crypto
+    implementation libs.androidx.browser
+    implementation libs.androidx.exifinterface
+
+    implementation libs.material
+    implementation libs.flexbox
+    implementation libs.gson
+
+    implementation libs.dfu
+    implementation libs.logback.android
+    implementation libs.slf4j.api
+    implementation libs.mpandroidchart
+    implementation libs.durationformatter
+    implementation libs.ckchangelog
+    implementation libs.solarpositioning
+    implementation libs.cbor
+    // use pristine greendao instead of our custom version, since our custom jitpack-packaged
+    // version contains way too much and our custom patches are in the generator only.
+    implementation libs.greendao
+    implementation libs.apache.commons.lang3
+    implementation libs.cyanogenmod.sdk
+    implementation libs.colorpicker
+    implementation libs.bundles.android.emojify
+    implementation libs.protobuf.lite
+    implementation libs.okhttp
+    implementation libs.msgpack
+    implementation libs.searchpreference
+
+    implementation libs.bundles.mapsforge
+    implementation libs.androidsvg
+    implementation libs.jsoup
+
+    // Bouncy Castle is included directly in GB, to avoid pulling the entire dependency
+    // It's included in the org.bouncycastle.shaded package, to fix conflicts with roboelectric
+    //implementation 'org.bouncycastle:bcpkix-jdk18on:1.76'
+    //implementation 'org.bouncycastle:bcprov-jdk18on:1.76'
+
+    // Android SDK bundles org.json, but we need an actual implementation to replace the stubs in tests
+    testImplementation libs.json
+
+    // Needed for Armenian transliteration
+    implementation libs.ahocorasick
+
+    // Android Health Connect
+    implementation libs.guava // This is needed because CameraActivity.java line 41 doesn't have a ListenableFuture package
+    implementation libs.androidx.health.connect.client
+}
+
+preBuild.dependsOn(":GBDaoGenerator:genSources")
+preBuild.dependsOn(':FitCodeGenerator:genFit')
+preBuild.dependsOn(tasks.buildGitChangelog)
+
+gradle.beforeProject {
+    preBuild.dependsOn(":GBDaoGenerator:genSources")
+    preBuild.dependsOn(':FitCodeGenerator:genFit')
+}
+
+tasks.register('cleanGenerated', Delete) {
+    delete fileTree('src/main/java/nodomain/freeyourgadget/gadgetbridge/entities') {
+        include '**/*.java'
+        exclude '**/Abstract*.java'
+        exclude '**/GenericActivitySample.java'
+    }
+}
+
+tasks.clean.dependsOn(tasks.cleanGenerated)
+
+protobuf {
+    protoc {
+        artifact = libs.protoc.get()
+    }
+    generateProtoTasks {
+        all().each { final task ->
+            task.builtins {
+                java {
+                    option 'lite'
+                }
+            }
+        }
+    }
+}

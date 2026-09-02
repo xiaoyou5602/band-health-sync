@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory
+        android:key="widget_pref_category_generic"
+        android:title="@string/watchface_dialog_widget_cat_generic"
+        app:iconSpaceReserved="false">
+        <ListPreference
+            android:dialogTitle="@string/watchface_dialog_widget_type"
+            android:key="pref_hybridhr_widget_type"
+            android:negativeButtonText="@string/cancel"
+            android:persistent="false"
+            android:title="@string/watchface_dialog_widget_type"
+            app:iconSpaceReserved="false" />
+        <ListPreference
+            android:dialogTitle="@string/watchface_dialog_widget_color"
+            android:key="pref_hybridhr_widget_color"
+            android:negativeButtonText="@string/cancel"
+            android:persistent="false"
+            android:title="@string/watchface_dialog_widget_color"
+            app:iconSpaceReserved="false" />
+        <ListPreference
+            android:dialogTitle="@string/watchface_dialog_widget_background"
+            android:entries="@array/pref_hybridhr_widgetbackgrounds_items"
+            android:entryValues="@array/pref_hybridhr_widgetbackgrounds_values"
+            android:key="pref_hybridhr_widget_background"
+            android:negativeButtonText="@string/cancel"
+            android:persistent="false"
+            android:title="@string/watchface_dialog_widget_background"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="widget_pref_category_position"
+        android:title="@string/watchface_dialog_widget_cat_position"
+        app:iconSpaceReserved="false">
+        <EditTextPreference
+            android:inputType="numberDecimal"
+            android:key="pref_hybridhr_widget_pos_x"
+            android:persistent="false"
+            android:title="@string/watchface_dialog_widget_x_coordinate"
+            app:iconSpaceReserved="false" />
+        <EditTextPreference
+            android:inputType="numberDecimal"
+            android:key="pref_hybridhr_widget_pos_y"
+            android:persistent="false"
+            android:title="@string/watchface_dialog_widget_y_coordinate"
+            app:iconSpaceReserved="false" />
+        <ListPreference
+            android:dialogTitle="@string/watchface_dialog_widget_presets"
+            android:key="pref_hybridhr_widget_pos_preset"
+            android:negativeButtonText="@string/cancel"
+            android:persistent="false"
+            android:title="@string/watchface_dialog_widget_presets"
+            app:iconSpaceReserved="false"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="widget_pref_category_2nd_tz_widget"
+        android:title="@string/watchface_dialog_widget_cat_2nd_tz_widget"
+        app:iconSpaceReserved="false">
+        <ListPreference
+            android:dialogTitle="@string/watchface_dialog_widget_timezone"
+            android:key="pref_hybridhr_widget_timezone"
+            android:negativeButtonText="@string/cancel"
+            android:persistent="false"
+            android:title="@string/watchface_dialog_widget_timezone"
+            app:iconSpaceReserved="false" />
+        <EditTextPreference
+            android:inputType="numberDecimal"
+            android:key="pref_hybridhr_widget_timezone_timeout"
+            android:persistent="false"
+            android:title="@string/watchface_dialog_widget_timezone_duration"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="widget_pref_category_custom_widget"
+        android:title="@string/watchface_dialog_widget_cat_custom_widget"
+        app:iconSpaceReserved="false">
+        <EditTextPreference
+            android:inputType="numberDecimal"
+            android:key="pref_hybridhr_widget_width"
+            android:persistent="false"
+            android:title="@string/watchface_dialog_widget_width"
+            app:iconSpaceReserved="false" />
+        <EditTextPreference
+            android:inputType="numberDecimal"
+            android:key="pref_hybridhr_widget_custom_timeout"
+            android:persistent="false"
+            android:title="@string/watchface_dialog_widget_update_timeout"
+            app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat
+            android:key="pref_hybridhr_widget_custom_hide_text"
+            android:layout="@layout/preference_checkbox"
+            android:persistent="false"
+            android:title="@string/watchface_dialog_widget_timeout_hide_text"
+            app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat
+            android:key="pref_hybridhr_widget_custom_show_circle"
+            android:layout="@layout/preference_checkbox"
+            android:persistent="false"
+            android:title="@string/watchface_dialog_widget_timeout_show_circle"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

@@ -1,0 +1,259 @@
+package nodomain.freeyourgadget.gadgetbridge.devices;
+
+import org.junit.Assert;
+import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+import nodomain.freeyourgadget.gadgetbridge.model.DeviceType;
+import nodomain.freeyourgadget.gadgetbridge.test.TestBase;
+
+public class BluetoothNameTest extends TestBase {
+    @Test
+    public void deviceMatchingByNameTest() {
+        final Map<String, DeviceType> bluetoothNameToExpectedType = new HashMap<>() {{
+            put("Active 2 NFC (Round)", DeviceType.AMAZFITACTIVE2NFC);
+            put("Amazfit Band 7", DeviceType.AMAZFITBAND7); // #2945
+            put("Amazfit GTR 3 Pro", DeviceType.AMAZFITGTR3PRO); // #2442
+            put("Amazfit GTS", DeviceType.AMAZFITGTS); // #5391
+            put("Amazfit GTS 3", DeviceType.AMAZFITGTS3); // #2442
+            put("Amazfit Helio Ring", DeviceType.AMAZFITHELIORING);
+            put("Amazfit T-Rex 2", DeviceType.AMAZFITTREX2); // #3033
+            put("T-Rex 3 Pro (48mm)-6752", DeviceType.AMAZFITTREX3PRO48MM); // #5533
+            put("Amazfit GTS 4 mini New", DeviceType.AMAZFITGTS4MININEW); // #5472
+            put("Mi Smart Band 4C_D77E", DeviceType.MIBAND4C);
+            put("Xiaomi Band 9 Active AB01", DeviceType.MIBAND9ACTIVE);
+            put("vívoactive 6", DeviceType.GARMIN_VIVOACTIVE_6);
+            put("CMF Buds 2", DeviceType.NOTHING_CMF_BUDS_2); // #5579
+            put("CMF Buds 2a", DeviceType.NOTHING_CMF_BUDS_2A); // #6028
+            put("HC96", DeviceType.HC96);
+            put("Soundcore Q30", DeviceType.SOUNDCORE_Q30); // #4316
+            put("soundcore Q30", DeviceType.SOUNDCORE_Q30); // #6371
+            put("soundcore  Q30", DeviceType.SOUNDCORE_Q30); // #6371 - unsure
+            put("P8", DeviceType.WASPOS); // from wasp-os source
+            put("P8DFU", DeviceType.WASPOS); // from wasp-os source
+            put("P80", DeviceType.COLMI_P80);
+            put("V73", DeviceType.COLMI_V73); // #5715
+            put("R05_9805", DeviceType.YAWELL_R05); // #3896
+            put("BT103(ID-AB01)", DeviceType.OUKITEL_BT103);
+            put("P66D(ID-AB01)", DeviceType.DOTN_P66D);
+            put("R1(ID-10B5)", DeviceType.R1); // #5621
+            put("IMIKI FRAME 2", DeviceType.IMIKI_FRAME_2);
+            put("Watch Kr Pro-4DBC", DeviceType.KIESLECT_CALLING_SMARTWATCH_KR_PRO);
+            put("HAYLOU Watch 2 Pro", DeviceType.HAYLOU_WATCH_2_PRO);
+            put("Y6(ID-28A8)", DeviceType.Y6); // #3949
+            put("Y66(ID-AB01)", DeviceType.Y66);
+            put("D3(ID-417F)", DeviceType.D3);
+            put("R3Max(ID-FC45)", DeviceType.BLACKVIEW_R3MAX); // matrix
+            put("S10", DeviceType.QECNATO_S10);
+            put("S52", DeviceType.S52);
+            put("ZL02D", DeviceType.ZL02D);
+            put("R11C_B200", DeviceType.YAWELL_R11);
+            put("R11_B200", DeviceType.YAWELL_R11);
+            put("WF-C710N", DeviceType.SONY_WF_C710N);
+            put("John's WF-C710N", DeviceType.SONY_WF_C710N);
+            put("LE_WF-C710N", null);
+            put("Polar H10 96C0B12D", DeviceType.POLARH10);
+            put("Forerunner 165 Music", DeviceType.GARMIN_FORERUNNER_165_MUSIC);
+            put("Forerunner 170", DeviceType.GARMIN_FORERUNNER_170); // #6276
+            put("Forerunner 170 Music", DeviceType.GARMIN_FORERUNNER_170_MUSIC);
+            put("R60", DeviceType.BLACKVIEW_R60);
+            put("eTrex SE", DeviceType.GARMIN_ETREX_SE);
+            put("GPSMAP H1", DeviceType.GARMIN_GPSMAP_H1); // #6122
+            put("GPSMAP 66S", DeviceType.GARMIN_GPSMAP_66S); // matrix
+            put("GPSMAP 66S #1234512345", DeviceType.GARMIN_GPSMAP_66S); // matrix
+            put("Instinct Tactical", DeviceType.GARMIN_INSTINCT_TACTICAL);
+            put("Instinct Solar Tac", DeviceType.GARMIN_INSTINCT_SOLAR_TACTICAL); // #5764
+            put("Instinct 2S Surf", DeviceType.GARMIN_INSTINCT_2S_SURF); // #5842
+            put("Xiaomi Smart Band 10 8C9F", DeviceType.MIBAND10);
+            put("Venu X1", DeviceType.GARMIN_VENU_X1);
+            put("Redmi Watch 5 163A", DeviceType.REDMIWATCH5);
+            put("Descent Mk3 43mm", DeviceType.GARMIN_DESCENT_MK3);
+            put("Descent G1", DeviceType.GARMIN_DESCENT_G1); // #5915
+            put("Descent G2", DeviceType.GARMIN_DESCENT_G2);
+            put("Active 2 NFC (Round)-4B84", DeviceType.AMAZFITACTIVE2NFC);
+            put("Redmi Buds 6", DeviceType.REDMIBUDS6); // #6061
+            put("Redmi Buds 6 Pro", DeviceType.REDMIBUDS6PRO);
+            put("Xiaomi Watch S4 AB01", DeviceType.XIAOMI_WATCH_S4);
+            put("HUAWEI WATCH FIT 4 Pro-CC6", DeviceType.HUAWEIWATCHFIT4PRO);
+            put("HUAWEI WATCH FIT 5-810", DeviceType.HUAWEIWATCHFIT5); // #6097
+            put("Huawei Watch Fit 5 Pro-F64", DeviceType.HUAWEIWATCHFIT5PRO); // #6100
+            put("HUAWEI Band 11-CEF", DeviceType.HUAWEIBAND11); // #5839
+            put("HUAWEI Band 11 Pro-C5A", DeviceType.HUAWEIBAND11PRO); // #5989
+            put("HUAWEI FreeClip 2", DeviceType.HUAWEI_FREECLIP2);
+            put("Edge Explore", DeviceType.GARMIN_EDGE_EXPLORE); // #4855
+            put("Edge Explore 2", DeviceType.GARMIN_EDGE_EXPLORE_2); // #4855
+            put("Redmi Smart Band 3 CCF1", DeviceType.REDMISMARTBAND3);
+            put("fenix 5s", DeviceType.GARMIN_FENIX_5S); // matrix
+            put("fenix 5s Plus", DeviceType.GARMIN_FENIX_5S_PLUS); // #6433
+            put("fenix 6 Pro", DeviceType.GARMIN_FENIX_6_PRO); // #5536
+            put("fenix 6X Pro", DeviceType.GARMIN_FENIX_6X_PRO);
+            put("fenix 6X Sapphire", DeviceType.GARMIN_FENIX_6X_SAPPHIRE); // #5496
+            put("fenix 6S Pro Solar", DeviceType.GARMIN_FENIX_6S_PRO_SOLAR); // #5568
+            put("R50Pro", DeviceType.R50PRO);
+            put("P22B1", DeviceType.P22B1);
+            put("SBM67", DeviceType.SILVERCREST_SBM_67);
+            put("BPM Smart", DeviceType.SANITAS_SBM_67);
+            put("Sinilink-APP", DeviceType.SINILINK); // #6040
+            put("R11_0500", DeviceType.YAWELL_R11); // #4711
+            put("Edge 2x", DeviceType.GARMIN_EDGE_25); // #5779
+            put("Edge 130", DeviceType.GARMIN_EDGE_130); // matrix
+            put("Edge 840", DeviceType.GARMIN_EDGE_840); // matrix
+            put("Edge 1040", DeviceType.GARMIN_EDGE_1040); // matrix
+            put("Lily 2", DeviceType.GARMIN_LILY_2); // matrix
+            put("Lily 2 Active", DeviceType.GARMIN_LILY_2_ACTIVE);
+            put("Instinct 3 - 45mm", DeviceType.GARMIN_INSTINCT_3); // #4923
+            put("Instinct E - 45mm", DeviceType.GARMIN_INSTINCT_E); // #4526
+            put("fenix 7S Pro", DeviceType.GARMIN_FENIX_7S_PRO); // #4488
+            put("Forerunner 35", DeviceType.GARMIN_FORERUNNER_35); // #5558
+            put("Forerunner 45", DeviceType.GARMIN_FORERUNNER_45);
+            put("Forerunner 745", DeviceType.GARMIN_FORERUNNER_745); // #5556
+            put("Sony ULT", DeviceType.SONY_WH_ULT900N); // #4444
+            put("ULT WEAR", DeviceType.SONY_WH_ULT900N); // found online
+            put("ULT WEAR (David)", DeviceType.SONY_WH_ULT900N); // #6399
+            put("LE_ULT WEAR", DeviceType.UNKNOWN); // #6399 - ignore LE variant
+            put("Instinct Dual Power", DeviceType.GARMIN_INSTINCT_SOLAR); // #4380
+            put("Redmi Buds 4 Active", DeviceType.REDMIBUDS4ACTIVE); // #4359
+            put("OPPO Enco Air2", DeviceType.OPPO_ENCO_AIR2);
+            put("Forerunner 55", DeviceType.GARMIN_FORERUNNER_55);
+            put("fenix 7", DeviceType.GARMIN_FENIX_7);
+            put("Venu Sq", DeviceType.GARMIN_VENU_SQ);
+            put("fenix 8 - 51mm", DeviceType.GARMIN_FENIX_8); // #4226
+            put("quatix 8 - 51mm", DeviceType.GARMIN_QUATIX_8); // #5575
+            put("tactix 7", DeviceType.GARMIN_TACTIX_7); // #5782
+            put("tactix 8 - 51mm", DeviceType.GARMIN_TACTIX_8); // #5772
+            put("Forerunner 265S", DeviceType.GARMIN_FORERUNNER_265S);
+            put("Forerunner 935", DeviceType.GARMIN_FORERUNNER_935); // #5870
+            put("Forerunner 955", DeviceType.GARMIN_FORERUNNER_955); // #4124
+            put("Enduro", DeviceType.GARMIN_ENDURO); // #5347
+            put("Enduro 3", DeviceType.GARMIN_ENDURO_3);
+            put("vívomove Sport", DeviceType.GARMIN_VIVOMOVE_SPORT); // #5080
+            put("Redmi Watch 5 Active E7B7", DeviceType.REDMIWATCH5ACTIVE);
+            put("Move", DeviceType.REDMIWATCHMOVE); // matrix
+            put("BSC300", DeviceType.IGPSPORT_BSC300); // matrix
+            put("Forerunner 165", DeviceType.GARMIN_FORERUNNER_165);
+            put("Xiaomi Smart Band 9 7E1E", DeviceType.MIBAND9);
+            put("Venu 2S", DeviceType.GARMIN_VENU_2S); // #4010
+            put("Venu", DeviceType.GARMIN_VENU); // #4003
+            put(".bohemic", DeviceType.BOHEMIC_SMART_BRACELET); // #3190
+            put("IMP-2027", DeviceType.VIVITAR_HR_BP_MONITOR_ACTIVITY_TRACKER); // #3925
+            put("CMF Buds Pro 2", DeviceType.NOTHING_CMF_BUDS_PRO_2); // #3924
+            put("CMF Watch Pro 2-0DCA", DeviceType.NOTHING_CMF_WATCH_PRO_2); // #3899
+            put("CMF Watch 3 Pro-D286", DeviceType.NOTHING_CMF_WATCH_PRO_3); // #5596
+            put("vívomove Trend", DeviceType.GARMIN_VIVOMOVE_TREND); // #3875
+            put("fenix 5", DeviceType.GARMIN_FENIX_5); // #3869
+            put("Forerunner 255S", DeviceType.GARMIN_FORERUNNER_255S); // #3841
+            put("Space Travel 2 Ultra", DeviceType.MOONDROP_SPACE_TRAVEL_2_ULTRA); // matrix
+            put("Venu 2", DeviceType.GARMIN_VENU_2); // #3835
+            put("Venu 4 45mm", DeviceType.GARMIN_VENU_4); // #5461
+            put("Venu 4 - 45mm", DeviceType.GARMIN_VENU_4); // matrix
+            put("Forerunner 265", DeviceType.GARMIN_FORERUNNER_265); // #3831
+            put("EPIX PRO - 51mm", DeviceType.GARMIN_EPIX_PRO); // #3810
+            put("EPIX", DeviceType.GARMIN_EPIX); // matrix
+            put("Amazfit GTR", DeviceType.AMAZFITGTR); // #3809 / #2442
+            put("Amazfit Bip 3", DeviceType.AMAZFITBIP3); // #3627
+            put("Xiaomi Band 8 Active 0C09", DeviceType.MIBAND8ACTIVE); // #3614
+            put("UAT-4261", DeviceType.GARMIN_VENU_3S); // #3602
+            put("Forerunner 970", DeviceType.GARMIN_FORERUNNER_970); // #6320
+            put("Redmi Watch 3 892C", DeviceType.REDMIWATCH3); // #3581
+            put("Redmi Buds 5 Pro", DeviceType.REDMIBUDS5PRO); // #3566
+            put("Redmi Watch 2 C21E", DeviceType.REDMIWATCH2); // #3543
+            put("MHO-C303", DeviceType.MIJIA_MHO_C303); // #3513
+            put("Xiaomi Smart Band 8 Pro CF08", DeviceType.MIBAND8PRO); // #3471
+            put("Xiaomi Smart Band 8 D3BD", DeviceType.MIBAND8); // #3146
+            put("Watch Pro", DeviceType.NOTHING_CMF_WATCH_PRO); // #3468
+            put("vívoactive 5", DeviceType.GARMIN_VIVOACTIVE_5); // #3459
+            put("ColaCao23", DeviceType.COLACAO23); // #3455
+            put("ColaCao21", DeviceType.COLACAO21); // #2955
+            put("Q11", DeviceType.LAXASFIT_Q11); // #5774
+            put("Xiaomi Watch S1 Pro CF1B", DeviceType.XIAOMI_WATCH_S1_PRO); // #3450
+            put("Ear (2)", DeviceType.NOTHING_EAR2); // #3450
+            put("realme Buds T100", DeviceType.REALME_BUDS_T100); // #6258
+            put("realme Buds T110", DeviceType.REALME_BUDS_T110);
+            put("realme Buds T200", DeviceType.REALME_BUDS_T200); // #6258
+            put("realme Buds T300", DeviceType.REALME_BUDS_T300); // #6258
+            put("realme Buds Air6 Pro", DeviceType.REALME_BUDS_AIR_6_PRO);
+            put("Redmi Smart Band 2 604D", DeviceType.REDMISMARTBAND2); // #3274
+            put("vívosmart 5", DeviceType.GARMIN_VIVOSMART_5); // #3269
+            put("Instinct Crossover", DeviceType.GARMIN_INSTINCT_CROSSOVER); // #3252
+            put("Xiaomi Watch S3 eSIM 9BD2", DeviceType.XIAOMI_WATCH_S3); // #3506
+            put("Amazfit Bip Lite", DeviceType.AMAZFITBIP_LITE); // #1648
+            put("Mi Band 3", DeviceType.MIBAND3); // #1113
+            put("Q82543", DeviceType.Q8); // #978
+            put("vívomove HR", DeviceType.VIVOMOVE_HR); // #959
+            put("WH-1000XM4", DeviceType.SONY_WH_1000XM4); // #2549
+            put("Mi Smart Band 6", DeviceType.MIBAND6); // #2263
+            put("Mi Watch Lite_ABF4", DeviceType.MIWATCHLITE); // #2234
+            put("Zepp E", DeviceType.ZEPP_E); // #2176
+            put("Bip S Lite", DeviceType.AMAZFITBIPS_LITE); // #2055
+            put("Mi Smart Band 5", DeviceType.MIBAND5); // #1929
+            put("CASIO STB-1000", DeviceType.CASIOGB6900); // #1902
+            put("Amazfit Bip 3 Pro", DeviceType.AMAZFITBIP3PRO); // #3249
+            put("Redmi Band Pro AB01", DeviceType.REDMISMARTBANDPRO); // #3069
+            put("HRM600:1234", DeviceType.GARMIN_HRM_600); // #5633
+            put("HRMPro+:123456", DeviceType.GARMIN_HRM_PRO_PLUS); // #5364
+            put("Instinct 2S Solar", DeviceType.GARMIN_INSTINCT_2S_SOLAR); // #3063
+            put("LE_WH-1000XM5", DeviceType.SONY_WH_1000XM5); // #2969
+            put("WH-1000XM2", DeviceType.SONY_WH_1000XM2); // #2935
+            put("WF-1000XM4", DeviceType.SONY_WF_1000XM4); // #2925
+            put("Xiaomi Smart Band 7 Pro", DeviceType.MIBAND7PRO); // #2781
+            put("Galaxy Buds Pro (B352)", DeviceType.GALAXY_BUDS_PRO); // #2642
+            put("Redmi Watch 2 Lite 31A5", DeviceType.REDMIWATCH2LITE); // #2637
+            put("honor Watch-7EE", DeviceType.HONORMAGICWATCH); // #5816
+            put("HUAWEI Band 6-A47", DeviceType.HUAWEIBAND6); // #2569
+            put("WATCH Ultimate 2-D96", DeviceType.HUAWEIWATCHULTIMATE2); // matrix
+            put("716", DeviceType.FITPRO);
+            put("LH716", DeviceType.FITPRO);
+            put("Sunset 6", DeviceType.FITPRO);
+            put("Watch7", DeviceType.FITPRO);
+            put("Fit1900", DeviceType.FITPRO);
+            put("M6-4711", DeviceType.FITPRO);
+            put("M4-4711", DeviceType.FITPRO);
+            put("YBW-05", DeviceType.FITPRO); // #6069
+            put("C20", DeviceType.C20); // #4070
+            put("C 20", DeviceType.C20); // #5495
+            put("OV-Touch2.6_LE", DeviceType.OVTOUCH26); // #5628
+            put("BPW4500", DeviceType.BRAUN_BPW4500); // #5886
+            put("MATSON Monitor", DeviceType.BM2_BATTERY_MONITOR); // #6212
+            put("BM6", DeviceType.BM6_BATTERY_MONITOR); // #6236
+            put("Xiaomi Smart Band 10 Pro AB01", DeviceType.MIBAND10PRO); // #6248
+            put("SmartShunt HQ2303UCHFV", DeviceType.VICTRON_SMARTSHUNT); // #6263
+            put("Soundcore Q30", DeviceType.SOUNDCORE_Q30); // #6396
+            put("Soundcore Life Tune", DeviceType.SOUNDCORE_LIFE_TUNE); // #6396
+            put("Soundcore Life Tune XR", DeviceType.SOUNDCORE_LIFE_TUNE_XR); // #6396
+        }};
+
+        for (Map.Entry<String, DeviceType> e : bluetoothNameToExpectedType.entrySet()) {
+            final String bluetoothName = e.getKey();
+            final DeviceType expectedType = e.getValue();
+            final List<DeviceType> matches = new ArrayList<>(1);
+            // Check the bluetooth name against all existing coordinators
+            for (DeviceType type : DeviceType.values()) {
+                final Pattern pattern = ((AbstractDeviceCoordinator) type.getDeviceCoordinator()).getSupportedDeviceName();
+                if (pattern != null) {
+                    if (pattern.matcher(bluetoothName).matches()) {
+                        matches.add(type);
+                    }
+                }
+            }
+
+            if (expectedType != null && expectedType != DeviceType.UNKNOWN) {
+                Assert.assertEquals(
+                        "Bluetooth name " + bluetoothName + " should only match the expected DeviceType",
+                        Collections.singletonList(expectedType),
+                        matches
+                );
+            } else {
+                Assert.assertTrue(
+                        "Bluetooth name " + bluetoothName + " should match no DeviceType",
+                        matches.isEmpty()
+                );
+            }
+        }
+    }
+}

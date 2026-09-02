@@ -1,0 +1,166 @@
+/*  Copyright (C) 2024-2025 a0z, José Rebelo, Thomas Kuehne
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.activities.charts;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.database.DBHandler;
+import nodomain.freeyourgadget.gadgetbridge.devices.SampleProvider;
+import nodomain.freeyourgadget.gadgetbridge.devices.TimeSampleProvider;
+import nodomain.freeyourgadget.gadgetbridge.model.RespiratoryRateSample;
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivitySample;
+
+abstract class RespiratoryRateFragment<T extends ChartsData> extends AbstractChartFragment<T> {
+    protected static final Logger LOG = LoggerFactory.getLogger(RespiratoryRateFragment.class);
+
+    protected int CHART_TEXT_COLOR;
+    protected int TEXT_COLOR;
+    protected int LEGEND_TEXT_COLOR;
+
+    protected int BACKGROUND_COLOR;
+    protected int DESCRIPTION_COLOR;
+    protected int TOTAL_DAYS = 1;
+
+    @Override
+    public String getTitle() {
+        return getString(R.string.respiratoryrate);
+    }
+
+    @Override
+    protected void init() {
+        TEXT_COLOR = GBApplication.getTextColor(requireContext());
+        CHART_TEXT_COLOR = GBApplication.getSecondaryTextColor(requireContext());
+        BACKGROUND_COLOR = GBApplication.getBackgroundColor(requireContext());
+        LEGEND_TEXT_COLOR = DESCRIPTION_COLOR = GBApplication.getTextColor(requireContext());
+        CHART_TEXT_COLOR = GBApplication.getSecondaryTextColor(requireContext());
+    }
+
+    protected List<RespiratoryRateFragment.RespiratoryRateDay> getMyRespiratoryRateDaysData(DBHandler db, Calendar day, GBDevice device) {
+        day = (Calendar) day.clone(); // do not modify the caller's argument
+        day.add(Calendar.DATE, -TOTAL_DAYS + 1);
+
+        final boolean supportsDayRespiratoryRate = device.getDeviceCoordinator().supportsDayRespiratoryRate(device);
+
+        List<RespiratoryRateDay> daysData = new ArrayList<>();
+        for (int counter = 0; counter < TOTAL_DAYS; counter++) {
+            int startTs;
+            int endTs;
+            day = (Calendar) day.clone(); // do not modify the caller's argument
+            day.set(Calendar.HOUR_OF_DAY, 0);
+            day.set(Calendar.MINUTE, 0);
+            day.set(Calendar.SECOND, 0);
+            day.add(Calendar.HOUR, 0);
+            startTs = (int) (day.getTimeInMillis() / 1000);
+            endTs = startTs + 24 * 60 * 60 - 1;
+            List<? extends ActivitySample> activitySamples = getAllActivitySamples(db, device, startTs, endTs);
+            SleepAnalysis sleepAnalysis = new SleepAnalysis();
+            List<SleepAnalysis.SleepSession> sleepSessions = sleepAnalysis.calculateSleepSessions(activitySamples);
+            List<? extends RespiratoryRateSample> samples = getRespiratoryRateSamples(db, device, startTs, endTs);
+            Calendar d = (Calendar) day.clone();
+            daysData.add(new RespiratoryRateDay(d, samples, sleepSessions, supportsDayRespiratoryRate));
+            day.add(Calendar.DATE, 1);
+        }
+        return daysData;
+    }
+
+    protected List<? extends RespiratoryRateSample> getRespiratoryRateSamples(DBHandler db, GBDevice device, int tsFrom, int tsTo) {
+        TimeSampleProvider<? extends RespiratoryRateSample> provider = device.getDeviceCoordinator().getRespiratoryRateSampleProvider(device, db.getDaoSession());
+        return provider.getAllSamples(tsFrom * 1000L, tsTo * 1000L);
+    }
+
+    protected List<? extends ActivitySample> getAllActivitySamples(DBHandler db, GBDevice device, int startTs, int endTs) {
+        SampleProvider<? extends ActivitySample> provider = device.getDeviceCoordinator().getSampleProvider(device, db.getDaoSession());
+        return provider.getAllActivitySamples(startTs, endTs);
+    }
+
+    protected static class RespiratoryRateDay extends ChartsData {
+        public int awakeRateAvg;
+        public int sleepRateAvg;
+        public int rateLowest;
+        public int rateHighest;
+        public Calendar day;
+        List<? extends RespiratoryRateSample> respiratoryRateSamples;
+        List<SleepAnalysis.SleepSession> sleepSessions;
+
+        protected RespiratoryRateDay(Calendar day,
+                                     List<? extends RespiratoryRateSample> respiratoryRateSamples,
+                                     List<SleepAnalysis.SleepSession> sleepSessions,
+                                     boolean supportsDayRespiratoryRate) {
+            this.day = day;
+            this.respiratoryRateSamples = respiratoryRateSamples;
+            this.sleepSessions = sleepSessions;
+            float awakeRateTotal = 0;
+            int awakeCounter = 0;
+            float sleepRateTotal = 0;
+            int sleepCounter = 0;
+            float lowest = 0;
+            float highest = 0;
+            if (!this.respiratoryRateSamples.isEmpty()) {
+                for (RespiratoryRateSample sample : this.respiratoryRateSamples) {
+                    if (isSleepSample(sample, supportsDayRespiratoryRate)) {
+                        sleepRateTotal += sample.getRespiratoryRate();
+                        sleepCounter++;
+                    } else {
+                        awakeRateTotal += sample.getRespiratoryRate();
+                        awakeCounter++;
+                    }
+                    if (sample.getRespiratoryRate() > highest) {
+                        highest = sample.getRespiratoryRate();
+                    }
+                    if (sample.getRespiratoryRate() < lowest || lowest == 0) {
+                        lowest = sample.getRespiratoryRate();
+                    }
+                }
+            }
+            if (awakeRateTotal > 0) {
+                this.awakeRateAvg = Math.round(awakeRateTotal / awakeCounter);
+            }
+            if (sleepRateTotal > 0) {
+                this.sleepRateAvg = Math.round(sleepRateTotal / sleepCounter);
+            }
+            this.rateLowest = (int) lowest;
+            this.rateHighest = (int) highest;
+        }
+
+        private boolean isSleepSample(RespiratoryRateSample sample, boolean supportsDayRespiratoryRate) {
+            if (!supportsDayRespiratoryRate) {
+                return true;
+            }
+
+            if (this.sleepSessions.isEmpty()) {
+                return true;
+            }
+
+            for (SleepAnalysis.SleepSession session : this.sleepSessions) {
+                if (sample.getTimestamp() >= session.getSleepStart().getTime() && sample.getTimestamp() <= session.getSleepEnd().getTime()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+
+}

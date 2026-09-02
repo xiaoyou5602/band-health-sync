@@ -1,0 +1,632 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="action_settings">Asetukset</string>
+    <string name="controlcenter_fetch_activity_data">Synkronoi</string>
+    <string name="controlcenter_find_device">Löydä kadonnut laite</string>
+    <string name="application_name_generic">Gadgetbridge</string>
+    <string name="title_activity_controlcenter_generic">Gadgetbridge</string>
+    <string name="action_quit">Lopeta</string>
+    <string name="action_donate">Lahjoita</string>
+    <string name="controlcenter_take_screenshot">Ota kuvankaappaus</string>
+    <string name="controlcenter_disconnect">Katkaise yhteys</string>
+    <string name="controlcenter_delete_device">Poista laite</string>
+    <string name="controlcenter_delete_device_name">Poista %1$s</string>
+    <string name="controlcenter_delete_device_dialogmessage">Tämä poistaa laitteen ja kaikki siihen liittyvät tiedot!</string>
+    <string name="controlcenter_navigation_drawer_open">Avaa navigointivetolaatikko</string>
+    <string name="controlcenter_navigation_drawer_close">Sulje navigointivetolaatikko</string>
+    <string name="controlcenter_snackbar_need_longpress">Paina korttia pitkään katkaistaksesi yhteyden</string>
+    <string name="controlcenter_snackbar_disconnecting">Yhteyttä katkaistaan</string>
+    <string name="controlcenter_snackbar_connecting">Yhdistetään…</string>
+    <string name="controlcenter_snackbar_requested_screenshot">Otetaan ruutukaappausta laitteesta</string>
+    <string name="title_activity_appmanager">Sovellusten hallinta</string>
+    <string name="appmanager_cached_watchapps_watchfaces">Välimuistissa olevat sovellukset</string>
+    <string name="appmanager_installed_watchapps">Asennetut sovellukset</string>
+    <string name="appmanager_installed_watchfaces">Asennetut kellotaulut</string>
+    <string name="appmananger_app_delete">Poista</string>
+    <string name="appmananger_app_delete_cache">Poista laitteesta ja välimuistista</string>
+    <string name="appmananger_app_reinstall">Asenna uudelleen</string>
+    <string name="appmanager_app_openinstore">Etsi Pebble appstoresta</string>
+    <string name="appmanager_health_activate">Aktivoi</string>
+    <string name="appmanager_health_deactivate">Poista käytöstä</string>
+    <string name="appmanager_hrm_activate">Aktivoi sykemittari</string>
+    <string name="appmanager_hrm_deactivate">Poista sykemittari käytöstä</string>
+    <string name="appmanager_weather_activate">Aktivoi järjestelmän sääsovellus</string>
+    <string name="appmanager_weather_deactivate">Ota järjestelmän sääsovellus pois käytöstä</string>
+    <string name="app_configure">Määritä</string>
+    <string name="app_move_to_top">Siirrä ylimmäksi</string>
+    <string name="mi2_prefs_button_press_broadcast_default_value" translatable="false">nodomain.freeyourgadget.gadgetbridge.ButtonPressed</string>
+    <string name="sonyswr12_settings_title">Sony SWR12 asetukset</string>
+    <string name="sonyswr12_settings_low_vibration">Matala värinä käytössä</string>
+    <string name="sonyswr12_settings_stamina">Virransäästötila päällä</string>
+    <string name="sonyswr12_settings_alarm_interval">Älykäs hälytysväli minuutteina</string>
+    <string name="sonyswr12_settings_low_vibration_summary">Ota käyttöön matala värinän voimakkuus kaistalla</string>
+    <string name="sonyswr12_settings_stamina_summary">Virransäästötila poistaa säännöllisen automaattisen sykemittauksen käytöstä, mikä pidentää työaikaa</string>
+    <string name="sonyswr12_settings_alarm_interval_summary">Älykäs hälytysväli on aikaväli ennen asennettua hälytystä. Tässä välissä laite yrittää tunnistaa käyttäjän herättämisen unen kevyimmän vaiheen</string>
+    <string name="miband_firmware_known">Tämä laiteohjelmisto on testattu ja sen tiedetään olevan yhteensopiva Gadgetbridgen kanssa.</string>
+    <string name="fw_multi_upgrade_notice">Olet asentamassa %1$s, sekä %2$s laiteohjelmistoa, Mi Bandin nykyisten laitteiden sijasta.</string>
+    <string name="fw_upgrade_notice_amazfitneo">Olet asentamassa %s laiteohjelmistoa laitteeseen Amazfit Neo.
+\n
+\nRannekkeesi käynnistyy uudelleen .fw-tiedoston asentamisen jälkeen.
+\n
+\nJATKA OMALLA VASTUULLA!</string>
+    <string name="fw_upgrade_notice_amazfitx">Olet asentamassa %s laiteohjelmistoa laitteeseen Amazfit X.
+\n
+\nVarmista että asennat ensin .fw-tiedoston, sen jälkeen .res-tiedoston ja lopuksi .gps-tiedoston. Kellosi käynnistyy uudelleen .fw-tiedoston asentamisen jälkeen.
+\n
+\nHuomio: Sinun ei tarvitse asentaa .res tai .gps tiedostoja jos nämä tiedostot ovat samat kuin jo asennetut.
+\n
+\nJATKA OMALLA VASTUULLA!</string>
+    <string name="fw_upgrade_notice_miband3">Olet asentamassa %s laiteohjelmistoa laitteeseen Mi Band 3.
+\n
+\nVarmista että asennat ensin .fw-tiedoston, sen jälkeen .res-tiedoston ja lopuksi .gps-tiedoston. Kellosi käynnistyy uudelleen .fw-tiedoston asentamisen jälkeen.
+\n
+\nHuomio: Sinun ei tarvitse asentaa .res tai .gps tiedostoja jos nämä tiedostot ovat samat kuin jo asennetut.
+\n
+\nJATKA OMALLA VASTUULLA!</string>
+    <string name="fw_upgrade_notice_amazfitvergel">Olet asentamassa %s laiteohjelmistoa laitteeseen Amazfit Verge Lite.
+\n
+\nVarmista että asennat ensin .fw-tiedoston, sen jälkeen .res-tiedoston ja lopuksi .gps-tiedoston. Kellosi käynnistyy uudelleen .fw-tiedoston asentamisen jälkeen.
+\n
+\nHuomio: Sinun ei tarvitse asentaa .res tai .gps tiedostoja jos nämä tiedostot ovat samat kuin jo asennetut.
+\n
+\nJATKA OMALLA VASTUULLA!</string>
+    <string name="fw_upgrade_notice_amazfit_trex">Olet asentamassa %s laiteohjelmistoa laitteeseen Amazfit T-Rex.
+\n
+\nVarmista että asennat ensin .fw-tiedoston, sen jälkeen .res-tiedoston ja lopuksi .gps-tiedoston. Kellosi käynnistyy uudelleen .fw-tiedoston asentamisen jälkeen.
+\n
+\nHuomio: Sinun ei tarvitse asentaa .res tai .gps tiedostoja jos nämä tiedostot ovat samat kuin jo asennetut.
+\n
+\nJATKA OMALLA VASTUULLA!</string>
+    <string name="fw_upgrade_notice_amazfitgts">Olet asentamassa %s laiteohjelmistoa laitteeseen Amazfit GTS.
+\n
+\nVarmista että asennat ensin .fw-tiedoston, sen jälkeen .res-tiedoston ja lopuksi .gps-tiedoston. Kellosi käynnistyy uudelleen .fw-tiedoston asentamisen jälkeen.
+\n
+\nHuomio: Sinun ei tarvitse asentaa .res tai .gps tiedostoja jos nämä tiedostot ovat samat kuin jo asennetut.
+\n
+\nJATKA OMALLA VASTUULLA!</string>
+    <string name="fw_upgrade_notice_amazfitgtr">Olet asentamassa %s laiteohjelmistoa laitteeseen Amazfit GTR.
+\n
+\nVarmista että asennat ensin .fw-tiedoston, sen jälkeen .res-tiedoston ja lopuksi .gps-tiedoston. Kellosi käynnistyy uudelleen .fw-tiedoston asentamisen jälkeen.
+\n
+\nHuomio: Sinun ei tarvitse asentaa .res tai .gps tiedostoja jos nämä tiedostot ovat samat kuin jo asennetut.
+\n
+\nJATKA OMALLA VASTUULLA!</string>
+    <string name="fw_upgrade_notice_amazfitcor2">Olet asentamassa %s laiteohjelmistoa laitteeseen Amazfit Cor 2. \n \nVarmista että asennat ensin .fw-tiedoston, sen jälkeen .res-tiedoston ja lopuksi .gps-tiedoston. Kellosi käynnistyy uudelleen .fw-tiedoston asentamisen jälkeen. \n \nHuomio: Sinun ei tarvitse asentaa .res tai .gps tiedostoja jos nämä tiedostot ovat samat kuin jo asennetut. \n \nJATKA OMALLA VASTUULLA! \n \nTÄYSIN TESTAAMATON, TODENNÄKÖISESTI SINUN TARVITSEE ASENTAA BEATS_W LAITEOHJELMISTO JOS LAITTEESI NIMI ON \"Amazfit Band 2\"</string>
+    <string name="fw_upgrade_notice_amazfitcor">Olet asentamassa %s laiteohjelmistoa laitteeseen Amazfit Cor.
+\n
+\nVarmista että asennat ensin .fw-tiedoston, sen jälkeen .res-tiedoston ja lopuksi .gps-tiedoston. Kellosi käynnistyy uudelleen .fw-tiedoston asentamisen jälkeen.
+\n
+\nHuomio: Sinun ei tarvitse asentaa .res tai .gps tiedostoja jos nämä tiedostot ovat samat kuin jo asennetut.
+\n
+\nJATKA OMALLA VASTUULLA!</string>
+    <string name="fw_upgrade_notice_amazfitbip_lite">Olet asentamassa %s laiteohjelmistoa laitteeseen Amazfit Bip Lite.
+\n
+\nVarmista että asennat ensin .fw-tiedoston, sen jälkeen .res-tiedoston ja lopuksi .gps-tiedoston. Kellosi käynnistyy uudelleen .fw-tiedoston asentamisen jälkeen.
+\n
+\nHuomio: Sinun ei tarvitse asentaa .res tai .gps tiedostoja jos nämä tiedostot ovat samat kuin jo asennetut.
+\n
+\nJATKA OMALLA VASTUULLA!</string>
+    <string name="fw_upgrade_notice_amazfitbip">Olet asentamassa %s laiteohjelmistoa laitteeseen Amazfit Bip.
+\n
+\nVarmista että asennat ensin .fw-tiedoston, sen jälkeen .res-tiedoston ja lopuksi .gps-tiedoston. Kellosi käynnistyy uudelleen .fw-tiedoston asentamisen jälkeen.
+\n
+\nHuomio: Sinun ei tarvitse asentaa .res tai .gps tiedostoja jos nämä tiedostot ovat samat kuin jo asennetut.
+\n
+\nJATKA OMALLA VASTUULLA!</string>
+    <string name="fw_upgrade_notice_miband4">Olet asentamassa %s laiteohjelmistoa laitteeseen Mi Band 4.
+\n
+\nVarmista että asennat ensin .fw-tiedoston, sen jälkeen .res-tiedoston ja lopuksi .gps-tiedoston. Kellosi käynnistyy uudelleen .fw-tiedoston asentamisen jälkeen.
+\n
+\nHuomio: Sinun ei tarvitse asentaa .res tai .gps tiedostoja jos nämä tiedostot ovat samat kuin jo asennetut.
+\n
+\nJATKA OMALLA VASTUULLA!</string>
+    <string name="fw_upgrade_notice_miband5">Olet asentamassa %s laiteohjelmistoa laitteeseen Mi Band 5.
+\n
+\nVarmista että asennat ensin .fw-tiedoston, sen jälkeen .res-tiedoston ja lopuksi .gps-tiedoston. Kellosi käynnistyy uudelleen .fw-tiedoston asentamisen jälkeen.
+\n
+\nHuomio: Sinun ei tarvitse asentaa .res tai .gps tiedostoja jos nämä tiedostot ovat samat kuin jo asennetut.
+\n
+\nJATKA OMALLA VASTUULLA!</string>
+    <string name="fw_upgrade_notice_miband6">Olet asentamassa %s laiteohjelmistoa laitteeseen Mi Band 6.
+\n
+\nVarmista että asennat ensin .fw-tiedoston, sen jälkeen .res-tiedoston ja lopuksi .gps-tiedoston. Kellosi käynnistyy uudelleen .fw-tiedoston asentamisen jälkeen.
+\n
+\nHuomio: Sinun ei tarvitse asentaa .res tai .gps tiedostoja jos nämä tiedostot ovat samat kuin jo asennetut.
+\n
+\nJATKA OMALLA VASTUULLA!</string>
+    <string name="fw_upgrade_notice">Olet asentamassa %s.</string>
+    <string name="title_activity_fw_app_insaller">Laiteohjelmiston/ohjelmiston asennusohjelma</string>
+    <string name="whitelist_all_for_notifications">Lisää kaikki ilmoitukset valkoiselle listalle</string>
+    <string name="blacklist_all_for_notifications">Lisää kaikki ilmoitukset mustalle listalle</string>
+    <string name="debugactivity_really_factoryreset">Tehdasastetuksien palauttaminen poistaa yhdistetystä laitteesta kaikki tiedot (jos tuettu). Xiaomin ja Huamin laitteet myös muuttavat Bluetooth MAC -osoitteen, joten ne näkyvät uusina laitteina Gadgetbridgessä.</string>
+    <string name="debugactivity_really_factoryreset_title">Tahdotko varmasti palauttaa tehdasasteukset?</string>
+    <string name="title_activity_debug">Virheenetsintä</string>
+    <string name="calendar_year">Vuosi</string>
+    <string name="calendar_two_weeks">2 viikkoa</string>
+    <string name="calendar_three_months">3 kuukautta</string>
+    <string name="calendar_six_months">6 kuukautta</string>
+    <string name="calendar_month">Kuukausi</string>
+    <string name="calendar_week">Viikko</string>
+    <string name="calendar_day">Päivä</string>
+    <string name="battery_level">Akun varaustaso</string>
+    <string name="battery_detail_activity_title">Akun tiedot</string>
+    <string name="controlcenter_calibrate_device">Laitteen kalibrointi</string>
+    <string name="controlcenter_set_alias">Määritä alias</string>
+    <string name="controlcenter_connect">Yhdistä</string>
+    <string name="controlcenter_change_fm_frequency">Muuta FM-taajuutta</string>
+    <string name="controlcenter_change_led_color">Muuta LED-väriä</string>
+    <string name="find_lost_device_message">Etsi %1$s?</string>
+    <string name="action_debug">Virheenetsintä</string>
+    <string name="title_activity_notification_management">Ilmoitusasetukset</string>
+    <string name="pref_header_general">Yleiset</string>
+    <string name="pref_title_language">Kieli</string>
+    <string name="pref_summary_minimize_priority_off">Tilapalkin kuvake ja lukitusnäytön ilmoitus näytetään</string>
+    <string name="pref_title_general_autoconnectonbluetooth">Yhdistä laitteeseen, kun Bluetooth on päällä</string>
+    <string name="pref_title_audio_player">Ensisijainen äänentoisto</string>
+    <string name="pref_summary_datetime_syctimeonconnect">Synkronoi aika Gadgetbridge-laitteeseen, kun muodostat yhteyden, ja kun aika tai aikavyöhyke muuttuu Android-laitteessa</string>
+    <string name="pref_title_notifications_call">Puhelut</string>
+    <string name="uncheck_all_applications">Poista valinta kaikista sovelluksista</string>
+    <string name="pref_header_notifications">Yleiset</string>
+    <string name="pref_title_general_autoreconnect">Yhdistä uudelleen automaattisesti</string>
+    <string name="pref_summary_minimize_priority_on">Tilapalkin kuvake ja lukitusnäytön ilmoitus ovat piilotettu</string>
+    <string name="pref_title_notifications_repetitions">Toistot</string>
+    <string name="pref_title_notifications_generic">Yleinen ilmoitustuki</string>
+    <string name="pref_title_notification_use_as">Käytä sovellusluetteloa…</string>
+    <string name="pref_title_whenscreenon">…myös näytön ollessa päällä</string>
+    <string name="pref_header_notification_application_settings">Sovelluskohtaiset</string>
+    <string name="pref_title_notification_use_as_deny">Estä ilmoitukset valituista sovelluksista</string>
+    <string name="pref_title_ping_tone">Ping-ääni</string>
+    <string name="pref_title_notifications_sms">Tekstiviesti</string>
+    <string name="pref_title_notifications_timeout">Ilmoitusten välinen vähimmäisaika</string>
+    <string name="pref_title_notifications_pebblemsg">Pebble-viestit</string>
+    <string name="pref_summary_notifications_pebblemsg">Tuki sovelluksille, jotka lähettävät ilmoituksia Pebbleen PebbleKitin kautta.</string>
+    <string name="pref_title_notification_filter">Älä häiritse</string>
+    <string name="pref_theme_black_background">Käytä mustaa taustaa tummassa tyylissä</string>
+    <string name="pref_title_support_voip_calls">Ota VoIP-sovelluspuhelut käyttöön</string>
+    <string name="pref_title_minimize_priority">Piilota Gadgetbridge-ilmoitus</string>
+    <string name="pref_theme_dark">Tumma</string>
+    <string name="pref_theme_system">Järjestelmä</string>
+    <string name="pref_theme_light">Vaalea</string>
+    <string name="pref_title_theme">Tyyli</string>
+    <string name="pref_title_datetime_syctimeonconnect">Synkronoi aika</string>
+    <string name="pref_header_datetime">Päivämäärä ja aika</string>
+    <string name="pref_default">Oletus</string>
+    <string name="pref_title_general_autostartonboot">Käynnistä automaattisesti</string>
+    <string name="title_activity_settings">Asetukset</string>
+    <string name="miband_firmware_suggest_whitelist">Jos haluat silti jatkaa ja asiat toimivat kunnolla myös sen jälkeen, pyydä Gadgetbridgen kehittäjiä merkitsemään %s-firmware-versio valkoiselle listalle.</string>
+    <string name="miband_firmware_unknown_warning">Tätä laiteohjelmistoa ei ole testattu, eikä se välttämättä ole yhteensopiva Gadgetbridgen kanssa.
+\n
+\nEmme suosittele sen asentamista!</string>
+    <string name="pref_summary_rtl">Ota tämä käyttöön, jos laitteesi ei voi näyttää oikealta vasemmalle kieliä</string>
+    <string name="pref_rtl_max_line_length">Oikealta vasemmalle enimmäisrivin pituus</string>
+    <string name="pref_title_rtl">Oikealta vasemmalle</string>
+    <string name="check_all_applications">Valitse kaikki sovellukset</string>
+    <string name="pref_summary_notification_filter">Älä lähetä ilmoituksia laitteille, kun Älä häiritse -tila on päällä</string>
+    <string name="pref_title_notification_use_as_allow">Salli ilmoitukset valituista sovelluksista</string>
+    <string name="pref_title_transliteration">Translitterointi</string>
+    <string name="pref_summary_transliteration">Ota tämä käyttöön, jos laitteesi ei tue kielesi fonttia</string>
+    <string name="fossil_hr_edit_action_delete">poista</string>
+    <string name="prefs_activity_in_device_card_sleep_title">Uni</string>
+    <string name="prefs_activity_in_device_card_sleep_title_summary">Näytä unen kesto</string>
+    <string name="prefs_activity_in_device_card_distance_title_summary">Etäisyys lasketaan askelista ja askelpituudesta (muutettavissa Asetuksissa - Tietoja sinusta)</string>
+    <string name="prefs_activity_in_device_card_steps_title_summary">Näytä kokonaisaskeleet</string>
+    <string name="miband_fwinstaller_untested_version">Testaamaton versio!</string>
+    <string name="find_lost_device_you_found_it">Löytyi!</string>
+    <string name="fossil_hr_new_action_cancel">peruuta</string>
+    <string name="pref_screen_notification_profile_alarm_clock">Herätyskello</string>
+    <string name="clock">Kello</string>
+    <string name="action_discover">Yhdistä uusi laite</string>
+    <string name="hr_widget_battery">Akku</string>
+    <string name="hr_widget_active_minutes">Aktiiviset minuutit</string>
+    <string name="devicetype_unknown">Tuntematon laite</string>
+    <string name="kind_watchface">Kellotaulu</string>
+    <string name="reminder_every_day">Joka päivä</string>
+    <string name="reminder_every_year">Joka vuosi</string>
+    <string name="title_activity_db_management">Tietojen hallinta</string>
+    <string name="pref_header_location">Sijainti</string>
+    <string name="reminder_every_week">Joka viikko</string>
+    <string name="reminder_every_month">Joka kuukausi</string>
+    <string name="reminder_delete_confirm_title">Poista muistutus</string>
+    <string name="alarm_sat_short">La</string>
+    <string name="alarm_sun_short">Su</string>
+    <string name="alarm_mon_short">Ma</string>
+    <string name="alarm_wed_short">Ke</string>
+    <string name="alarm_thu_short">To</string>
+    <string name="user_feedback_miband_set_alarms_ok">Hälytykset ovat lähetetty laitteeseen.</string>
+    <string name="pref_title_lower_button_function_short">Alempi nappi lyhyt</string>
+    <string name="pref_title_middle_button_function_short">Keskimmäinen nappi lyhyt</string>
+    <string name="pref_title_lower_button_function_double">Alempi nappi tupla</string>
+    <string name="kind_gps">GPS laiteohjelmisto</string>
+    <string name="timeformat_24h">24h</string>
+    <string name="timeformat_am_pm">AP/IP</string>
+    <string name="kind_font">Fontti</string>
+    <string name="hr_widget_steps">Askeleet</string>
+    <string name="hr_widget_date">PVM</string>
+    <string name="hr_widget_weather">Sää</string>
+    <string name="hr_appname_workout">Liikuntasuoritus</string>
+    <string name="hr_appname_stopwatch">Ajanottokello</string>
+    <string name="hr_appname_commute">Arkiliikkuminen</string>
+    <string name="pref_title_upper_button_function_short">Ylempi nappi lyhyt</string>
+    <string name="hr_appname_wellness">Hyvinvointi</string>
+    <string name="ft">jalka</string>
+    <string name="cm">cm</string>
+    <string name="steps_unit">askeleet</string>
+    <string name="hr_widget_calories">Kalorit</string>
+    <string name="hr_widget_nothing">Ei mitään</string>
+    <string name="pref_title_lower_button_function_long">Alempi nappi pitkä</string>
+    <string name="pref_title_middle_button_function_long">Keskimmäinen nappi pitkä</string>
+    <string name="pref_title_upper_button_function_double">Ylempi nappi tupla</string>
+    <string name="control_center_find_lost_device">Löydä kadonnut laite</string>
+    <string name="pref_header_other">Muu</string>
+    <string name="pref_header_system">Järjestelmä</string>
+    <string name="pref_header_equalizer">Taajuuskorjain</string>
+    <string name="always">Aina</string>
+    <string name="pref_call_privacy_mode_name">Piilota nimi, mutta näytä numero</string>
+    <string name="pref_message_privacy_mode_complete">Piilota sisältö</string>
+    <string name="pref_title_message_privacy_mode">Viestien yksityisyystila</string>
+    <string name="pref_title_canned_messages_set">Päivitä laitteessa</string>
+    <string name="pref_title_pebble_settings">Pebblen asetukset</string>
+    <string name="pref_title_enable_outgoing_call">Tue lähteviä puheluita</string>
+    <string name="pref_header_notifications_and_calls">Ilmoitukset ja puhelut</string>
+    <string name="this_is_a_test_notification_from_gadgetbridge">Tämä on Gadgetbridgestä lähetetty testi-ilmoitus</string>
+    <string name="alarm_fri_short">Pe</string>
+    <string name="alarm_tue_short">Ti</string>
+    <string name="alarm_snooze">Torkuta</string>
+    <string name="bluetooth_is_disabled_">Bluetooth on poistettu käytöstä.</string>
+    <string name="bluetooth_is_not_supported_">Bluetooth ei ole tuettu.</string>
+    <string name="find_my_phone_notification">Löydä puhelimeni</string>
+    <string name="test">Testi</string>
+    <string name="test_notification">Testi-ilmoitus</string>
+    <string name="unknown_state">Tuntematon tila</string>
+    <string name="connected">Yhdistetty</string>
+    <string name="connecting">Yhdistetään</string>
+    <string name="pref_title_unit_system">Yksiköt</string>
+    <string name="pref_title_timeformat">Aikamuoto</string>
+    <string name="pref_title_autoremove_notifications">Poista automaattisesti hylätyt ilmoitukset</string>
+    <string name="pref_title_enable_calendar_sync">Synkronoi kalenteri</string>
+    <string name="pref_title_sunrise_sunset">Auringon nousu ja lasku</string>
+    <string name="pref_header_pebble_timeline">Pebble aikajana</string>
+    <string name="pref_title_enable_pebblekit">Salli 3 osapuolten Android appien pääsy</string>
+    <string name="pref_title_pebble_sync_morpheuz">Synkronoi Morpheuz</string>
+    <string name="pref_title_pebble_sync_misfit">Synkronoi Misfit</string>
+    <string name="pref_title_pebble_sync_health">Synkronoi Pebble Health</string>
+    <string name="pref_title_canned_replies">Vastaukset</string>
+    <string name="pref_title_weather">Sää</string>
+    <string name="pref_call_privacy_mode_complete">Piilota nimi ja numero</string>
+    <string name="pref_header_privacy">Yksityisyys</string>
+    <string name="pref_call_privacy_mode_off">Näytä nimi ja numero</string>
+    <string name="pref_title_call_privacy_mode">Puheluiden yksityisyystila</string>
+    <string name="when_screen_off">Kun näyttö on pois päältä</string>
+    <string name="never">Ei koskaan</string>
+    <string name="pref_title_upper_button_function_long">Ylempi nappi pitkä</string>
+    <string name="pref_title_middle_button_function_double">Keskimmäinen nappi tupla</string>
+    <string name="devicestatus_connecting">Laite yhdistyy</string>
+    <string name="devicestatus_connected">Laite on yhdistetty</string>
+    <string name="delete">Poista</string>
+    <string name="pref_message_privacy_mode_off">Näytä sisältö</string>
+    <string name="pref_title_weather_location">Sään sijainti (LineageOS:n sään tarjoajaa varten)</string>
+    <string name="pref_header_development">Kehittäjäasetukset</string>
+    <string name="pref_call_privacy_mode_number">Piilota numero, mutta näytä nimi</string>
+    <string name="activity_type_elliptical_trainer">Crosstrainer</string>
+    <string name="controlcenter_power_off">Virta pois</string>
+    <string name="activity_type_treadmill">Juoksumatto</string>
+    <string name="activity_type_exercise">Harjoitus</string>
+    <string name="add_test_device">Lisää testilaite</string>
+    <string name="activity_type_yoga">Jooga</string>
+    <string name="select_all">Valitse kaikki</string>
+    <string name="controlcenter_power_off_confirm_title">Virta pois</string>
+    <string name="activity_type_soccer">Jalkapallo</string>
+    <string name="activity_summary_today">Tänään</string>
+    <string name="pref_header_device_spec_settings">Laiteasetukset</string>
+    <string name="pref_header_sensors_calibration">Tunnistimen kalibrointi</string>
+    <string name="activity_type_pingpong">Pöytätennis</string>
+    <string name="activity_type_unknown">Tuntematon aktiviteetti</string>
+    <string name="pref_summary_custom_deviceicon">Näytä laitekohtainen Android ilmoituskuvake Gadgetbridge-kuvakkeen sijasta, kun yhdistettynä</string>
+    <string name="pref_display_add_device_fab_on">Aina näkyvissä</string>
+    <string name="pref_display_add_device_fab_off">Näkyvissä ainoastaan, kun yhtään laitetta ei ole lisätty</string>
+    <string name="activity_type_swimming_openwater">Avovesiuinti</string>
+    <string name="activity_type_rowing_machine">Soutulaite</string>
+    <string name="activity_type_cricket">Kriketti</string>
+    <string name="activity_type_basketball">Koripallo</string>
+    <string name="activity_type_badminton">Sulkapallo</string>
+    <string name="activity_type_strength_training">Voimaharjoittelu</string>
+    <string name="activity_summary_yesterday">Eilen</string>
+    <string name="controlcenter_power_off_confirm_description">Oletko varma, että haluat sammuttaa laitteen?</string>
+    <string name="pref_display_add_device_fab">Nappi uuden laitteen lisäämiseksi</string>
+    <string name="pref_summary_notifications_and_calls_enable_misscall">Toistaa joka minuutti</string>
+    <string name="activity_type_running">Juoksu</string>
+    <string name="activity_type_walking">Kävely</string>
+    <string name="activity_type_swimming">Uinti</string>
+    <string name="activity_type_jump_roping">Hyppynaru</string>
+    <string name="activity_summaries">Urheiluaktiviteetit</string>
+    <string name="qhybrid_title_apps">Sovellukset</string>
+    <string name="kind_firmware">Laiteohjelmisto</string>
+    <string name="qhybrid_title_background_image">Taustakuva</string>
+    <string name="qhybrid_title_file_management">Tiedostonhallinta</string>
+    <string name="pref_title_physical_buttons">Fyysiset napit</string>
+    <string name="activity_type_biking">Pyöräily</string>
+    <string name="activity_type_indoor_cycling">Sisäpyöräily</string>
+    <string name="prefs_activity_in_device_card_title">Näytä aktiivisuustiedot laitekortilla</string>
+    <string name="prefs_activity_in_device_card_title_summary">Näytä tämänhetkiset askeleet, kuljettu matka tai unen määrä laitekortilla</string>
+    <string name="device_card_activity_card_title">Aktiivisuustiedot laitekortilla</string>
+    <string name="device_card_activity_card_title_summary">Valitse mitkä aktiivisuustiedot näytetään laitekortilla</string>
+    <string name="pref_applications_settings">Listaus sovelluksista</string>
+    <string name="share">Jaa</string>
+    <string name="qhybrid_title_apps_management">Sovellusten hallinta</string>
+    <string name="qhybrid_title_calibration">Kalibrointi</string>
+    <string name="pref_title_device_spec_settings_force_time">Pakota ajan synkronointi</string>
+    <string name="pref_title_vibration_strength">Värinän voimakkuus</string>
+    <string name="pref_summary_enable_calendar_sync">Lähetä kalenteritapahtumat aikajanalle</string>
+    <string name="pref_title_custom_deviceicon">Näytä laitekohtainen ilmoituskuvake</string>
+    <string name="pref_rtl_max_line_length_summary">Lyhentää tai pidentää oikealta vasemmalle tekstien jakamista</string>
+    <string name="prefs_sounds">Äänet</string>
+    <string name="menuitem_nfc">NFC</string>
+    <string name="menuitem_stress">Stressi</string>
+    <string name="menuitem_hr">Syke</string>
+    <string name="sony_automatic_power_off_3_hour">3 tuntia</string>
+    <string name="menuitem_notifications">Ilmoitukset</string>
+    <string name="prefs_right">Oikea</string>
+    <string name="sony_automatic_power_off_1_hour">1 tunti</string>
+    <string name="sony_automatic_power_off_5_min">5 minuuttia</string>
+    <string name="sony_automatic_power_off_30_min">30 minuuttia</string>
+    <string name="prefs_equalizer">Taajuuskorjain</string>
+    <string name="menuitem_status">Tila</string>
+    <string name="prefs_left">Vasen</string>
+    <string name="pref_title_charts_average">Näytä keskiarvot taulukoissa</string>
+    <string name="charts_legend_heartrate">Syke</string>
+    <string name="hr_widget_heart_rate">Syke</string>
+    <string name="pref_title_chart_heartrate_color">Sykkeen väri</string>
+    <string name="weekstepschart_steps_a_month">Askeleet kuukaudessa</string>
+    <string name="pref_chart_heartrate_color_orange">Oranssi</string>
+    <string name="pref_chart_heartrate_color_red">Punainen</string>
+    <string name="cancel">Peruuta</string>
+    <string name="ok">OK</string>
+    <string name="activity_prefs_gender">Sukupuoli</string>
+    <string name="pref_header_charts">Taulukoiden asetukset</string>
+    <string name="activity_prefs_height_cm">Pituus (cm)</string>
+    <string name="activity_prefs_step_length_cm">Askeleen pituus (cm)</string>
+    <string name="live_activity_heart_rate">Syke</string>
+    <string name="action_db_management">Tietojen hallinta</string>
+    <string name="watch9_time_hours">Tunnit:</string>
+    <string name="language_and_region_prefs">Kieli ja alue</string>
+    <string name="device_fw">Laiteohjelmiston versio: %1$s</string>
+    <string name="DEVINFO_HR_VER">"SYKE: "</string>
+    <string name="charts_legend_heartrate_average">Keskisyke</string>
+    <string name="activity_type_hiking">Patikointi</string>
+    <string name="kind_resources">Resurssit</string>
+    <string name="yes">Kyllä</string>
+    <string name="activity_type_climbing">Kiipeily</string>
+    <string name="menuitem_music">Musiikki</string>
+    <string name="menuitem_more">Enemmän</string>
+    <string name="menuitem_alexa">Alexa</string>
+    <string name="menuitem_flashlight">Taskulamppu</string>
+    <string name="menuitem_temperature">Lämpötila</string>
+    <string name="watch9_time_minutes">Minuutit:</string>
+    <string name="watch9_time_seconds">Sekunnit:</string>
+    <string name="watch9_calibration_button">Kalibroi</string>
+    <string name="menuitem_mutephone">Mykistä puhelin</string>
+    <string name="appwidget_text">Zzz</string>
+    <string name="activity_prefs_weight_kg">Paino (kg)</string>
+    <string name="activity_prefs_year_birth">Syntymävuosi</string>
+    <string name="activity_prefs_charts">Taulukoiden asetukset</string>
+    <string name="set">Aseta</string>
+    <string name="maximum_duration">Kesto</string>
+    <string name="_pebble_watch_mute">Mykistä</string>
+    <string name="_pebble_watch_reply">Vastaa</string>
+    <string name="notification_channel_low_battery_name">Akku vähissä</string>
+    <string name="waiting_for_reconnect">Odottaa yhteyden muodostumista</string>
+    <string name="activity_prefs_about_you">Tietoja sinusta</string>
+    <string name="activity_list_summary_active_steps">Aktiiviset askeleet</string>
+    <string name="pref_screen_notification_profile_generic_navigation">Navigaatio</string>
+    <string name="stats_y_axis_label">Askeleita minuutissa</string>
+    <string name="about_links">Linkit</string>
+    <string name="zetime_prefs_inactivity_mo">Maanantai</string>
+    <string name="zetime_prefs_inactivity_we">Keskiviikko</string>
+    <string name="zetime_prefs_inactivity_su">Sunnuntai</string>
+    <string name="preferences_category_device_specific_settings">Laitekohtaiset asetukset</string>
+    <string name="calories">Kalorit</string>
+    <string name="distance">Etäisyys</string>
+    <string name="live_activity_steps_history">Askeleiden historia</string>
+    <string name="live_activity_total_steps">Kokonaisaskeleet</string>
+    <string name="about_title">Tietoja</string>
+    <string name="about_activity_title_generic">Tietoja Gadgetbridgestä</string>
+    <string name="activity_filter_date_from">Alkaen</string>
+    <string name="activity_filter_date_to">Päättyen</string>
+    <string name="pref_screen_notification_profile_missed_call">Vastaamatta jääneen puhelun ilmoitus</string>
+    <string name="about_version">Versio %s</string>
+    <string name="chart_steps">Askeleet</string>
+    <string name="pref_screen_notification_profile_email">Sähköposti-ilmoitus</string>
+    <string name="pref_screen_notification_profile_generic_social">Sosiaalinen verkosto</string>
+    <string name="pref_screen_notification_profile_incoming_call">Saapuvan puhelun ilmoitus</string>
+    <string name="zetime_prefs_inactivity_th">Torstai</string>
+    <string name="zetime_prefs_inactivity_tu">Tiistai</string>
+    <string name="pref_screen_notification_profile_calendar">Kalenteri-ilmoitus</string>
+    <string name="activity_detail_duration_label">Kesto</string>
+    <string name="watchface_setting_wrist_flick_duration">Kesto (ms:ina)</string>
+    <string name="sleep_activity_date_range">Alkaen %1$s päättyen %2$s</string>
+    <string name="weekstepschart_steps_a_week">Askeleita viikossa</string>
+    <string name="title_activity_device_specific_settings">Laitekohtaiset asetukset</string>
+    <string name="zetime_prefs_inactivity_sa">Lauantai</string>
+    <string name="zetime_prefs_inactivity_fr">Perjantai</string>
+    <string name="pref_title_location_latitude">Leveysaste</string>
+    <string name="pref_title_location_longitude">Pituusaste</string>
+    <string name="watchface_dialog_widget_width">Vimpaimen leveys (pikseleinä)</string>
+    <string name="watchface_dialog_widget_timezone">Aikavyöhyke</string>
+    <string name="pref_activity_recognition_mode_auto">automaattinen</string>
+    <string name="pref_activity_recognize_rowing">tunnista soutaminen</string>
+    <string name="pref_activity_recognize_running">tunnista juokseminen</string>
+    <string name="menuitem_menu">Valikko</string>
+    <string name="pref_activity_recognize_walking">tunnista käveleminen</string>
+    <string name="pref_activity_recognition_mode_ask">kysy</string>
+    <string name="pref_activity_recognize_biking">tunnista pyöräily</string>
+    <string name="application_name_banglejs_main">Bangle.js Gadgetbridge</string>
+    <string name="gadgetbridge_running_banglejs_main">Bangle.js Gadgetbridge on käynnissä</string>
+    <string name="gadgetbridge_running_generic">Gadgetbridge on käynnissä</string>
+    <string name="supercars_lights_label">Valot</string>
+    <string name="title_activity_controlcenter_banglejs_main">Bangle.js Gadgetbridge</string>
+    <string name="title_activity_charts">Aktiivisuus ja uni</string>
+    <string name="info_no_devices_connected">Ei laitteita yhteydessä</string>
+    <string name="zetime_title_settings">ZeTimen asetukset</string>
+    <string name="world_clock_delete_confirm_title">Poista \'%1$s\'</string>
+    <string name="activity_sleepchart_activity_and_sleep">Aktiivisuus</string>
+    <string name="preferences_hplus_settings">HPlusin/Makibesin asetukset</string>
+    <string name="pref_world_clocks_title">Maailmankellot</string>
+    <string name="preferences_miband_1_2_settings" tools:ignore="TypographyFractions">Mi Band 1/2:n asetukset</string>
+    <string name="world_clock_delete_confirm_description">Oletko varma, että haluat poistaa tämän maailmankellon\?</string>
+    <string name="not_connected">Ei yhteydessä</string>
+    <string name="pref_theme_dynamic">Dynaamiset värit</string>
+    <string name="changelog_ok_button">Valmis</string>
+    <string name="about_contributors">Osallistujat</string>
+    <string name="controlcenter_start_activitymonitor">Aktiivisuutesi</string>
+    <string name="changelog_full_title">Muutosloki</string>
+    <string name="pref_write_logfiles">Kirjoita lokitiedostoja</string>
+    <string name="pref_theme_dynamic_colors_not_available_warning">Dynaamiset värit ei ole tuettu, se vaati Android 12:sta tai uudemman. Tästä johtuen Gadgetbridge käyttää oletus Material 3 -värejä.</string>
+    <string name="changelog_show_full">Lisää…</string>
+    <string name="action_changelog">Muutosloki</string>
+    <string name="about_hash">Commit %s</string>
+    <string name="reminder_delete_confirm_description">Oletko varma, että haluat poistaa muistutuksen\?</string>
+    <string name="sony_speak_to_chat_sensitivity_high">Korkea</string>
+    <string name="sony_speak_to_chat_focus_on_voice">Painotus ääneen</string>
+    <string name="sony_automatic_power_off">Automaattinen sammutus</string>
+    <string name="sony_equalizer_preset_manual">Manuaalinen</string>
+    <string name="sony_speak_to_chat_timeout_short">Lyhyt (15s)</string>
+    <string name="sony_speak_to_chat_timeout_long">Pitkä (1m)</string>
+    <string name="sony_equalizer_preset_speech">Puhe</string>
+    <string name="sony_speak_to_chat_sensitivity_auto">Automaattinen</string>
+    <string name="audio_codec">Äänikoodekki</string>
+    <string name="sony_equalizer_preset_bass_boost">Basson tehostus</string>
+    <string name="sony_equalizer_preset_relaxed">Rento</string>
+    <string name="sony_equalizer_preset_mellow">Lempeä</string>
+    <string name="sony_equalizer">Taajuuskorjain</string>
+    <string name="sony_anc_optimize_title">Optimoi</string>
+    <string name="sony_anc_optimizer_status_atmospheric_pressure">Mitataan ilmanpainetta…</string>
+    <string name="sony_anc_optimizer_status_analyzing">Analysoidaan…</string>
+    <string name="sony_speak_to_chat_timeout_standard">Vakio (30s)</string>
+    <string name="sony_speak_to_chat_sensitivity_low">Matala</string>
+    <string name="sony_equalizer_preset_excited">Innostunut</string>
+    <string name="sony_ambient_sound_noise_cancelling">Vastamelu</string>
+    <string name="sony_ambient_sound_level">Ympäristöäänen taso</string>
+    <string name="sony_equalizer_band_6300">6300Hz</string>
+    <string name="sony_ambient_sound">Tila</string>
+    <string name="sony_equalizer_preset_custom_2">Mukautettu 2</string>
+    <string name="sony_touch_sensor">Kosketuspaneeli</string>
+    <string name="sony_speak_to_chat_sensitivity">Puheentunnistuksen herkkyys</string>
+    <string name="pref_anc_optimizer_state_pressure">Ilmanpaine</string>
+    <string name="sony_anc_optimizer_status_finished">Viimeistellään…</string>
+    <string name="sony_anc_optimize_confirmation_description">Pidä kuulokkeita päässä tavalliseen tapaan. Jos niiden pitotapa tai ilmanpaine muuttuu, optimoi uudelleen.</string>
+    <string name="sony_anc_optimizer_status_starting">Aloitetaan…</string>
+    <string name="sony_automatic_power_off_when_taken_off">Kun kuulokkeet otetaan pois</string>
+    <string name="sony_equalizer_preset_vocal">Laulu</string>
+    <string name="sony_notification_voice_guide">Ilmoitukset ja ääniopas</string>
+    <string name="sony_ambient_sound_ambient_sound">Ympäristöääni</string>
+    <string name="sony_ambient_sound_focus_voice">Painotus ääneen</string>
+    <string name="sony_speak_to_chat_timeout_off">Pois</string>
+    <string name="sony_equalizer_band_16000">16000Hz</string>
+    <string name="sony_equalizer_preset_off">Pois</string>
+    <string name="sony_speak_to_chat_timeout">Aika, kunnes tila suljetaan</string>
+    <string name="sony_equalizer_preset_treble_boost">Diskantin tehostus</string>
+    <string name="sony_anc_optimizer_status_wearing_condition">Mitataan kuulokkeiden pitotapaa…</string>
+    <string name="sony_ambient_sound_off">Pois</string>
+    <string name="sony_equalizer_band_1000">1000Hz</string>
+    <string name="sony_pause_when_taken_off">Keskeytä, kun kuulokkeet otetaan pois</string>
+    <string name="sony_equalizer_preset_custom_1">Mukautettu 1</string>
+    <string name="sony_anc_optimize_description">Napsauta aloittaaksesi vastamelun optimoinnin.</string>
+    <string name="sony_automatic_power_off_off">Älä sammuta</string>
+    <string name="sony_anc_optimize_confirmation_title">Vastamelun optimointi</string>
+    <string name="sony_sound_position_off">Pois</string>
+    <string name="sony_equalizer_preset_bright">Kirkas</string>
+    <string name="sony_speak_to_chat_summary">Sammuta vastamelu automaattisesti, kun alat puhua.</string>
+    <string name="sony_equalizer_band_2500">2500Hz</string>
+    <string name="sony_equalizer_band_400">400Hz</string>
+    <string name="pref_header_sony_anc_optimizer">Vastamelun optimointi</string>
+    <string name="pref_header_sony_ambient_sound_control">Ympäristöäänten hallinta</string>
+    <string name="pref_header_time">Aika</string>
+    <string name="title_activity_controlcenter_main_nightly">Gadgetbridge Nightly</string>
+    <string name="appmanager_app_share">Jaa</string>
+    <string name="pref_header_calendar">Kalenteri</string>
+    <string name="about_activity_title_banglejs_main">Tietoja Bangle.js Gadgetbridgestä</string>
+    <string name="pref_title_notification_prefer_long_text">Suosi ilmoitusten pitkää muotoa</string>
+    <string name="pref_title_notifications_ignore_low_priority">Sivuuta matalan prioriteetin ilmoitukset</string>
+    <string name="pref_summary_notifications_ignore_low_priority">Älä lähetä matalan prioriteetin ilmoituksia laitteille</string>
+    <string name="open_fw_installer_warning_title">Varoitus</string>
+    <string name="pref_title_notifications_generic_settings">Androidin ilmoitusasetukset</string>
+    <string name="pref_summary_notification_prefer_long_text">Jos saatavilla, lähetä ilmoituksen pitkä muoto laitteisiin</string>
+    <string name="about_activity_title_main_nightly">Tietoja Gadgetbridge Nightlystä</string>
+    <string name="pref_header_health">Terveys</string>
+    <string name="about_activity_title_banglejs_nightly">Tietoja Bangle.js Gadgetbridge Nightlystä</string>
+    <string name="pref_title_notification_cache_while_disconnected">Välimuistita ilmoitukset kun saavuttamattomissa</string>
+    <string name="gadgetbridge_running_banglejs_nightly">Bangle.js Gadgetbridge Nightly on käynnissä</string>
+    <string name="open_fw_installer_pick_file">Valitse tiedosto</string>
+    <string name="title_activity_controlcenter_banglejs_nightly">Bangle.js Gadgetbridge Nightly</string>
+    <string name="pref_summary_notification_cache_while_disconnected">Laitteiden ollessa saavuttamattomissa välimuistita ilmoitukset ja lähetä ne niille yhteyden palattua</string>
+    <string name="gadgetbridge_running_main_nightly">Gadgetbridge Nightly on käynnissä</string>
+    <string name="application_name_banglejs_nightly">Bangle.js Gadgetbridge Nightly</string>
+    <string name="application_name_main_nightly">Gadgetbridge Nightly</string>
+    <string name="device_not_connected">Ei yhdistetty.</string>
+    <string name="pref_header_audio">Ääni</string>
+    <string name="dateformat_time">Aika</string>
+    <string name="dateformat_date_time"><![CDATA[Aika ja päivämäärä]]></string>
+    <string name="prefs_find_phone">Etsi puhelin</string>
+    <string name="button_watchface_add_widget">Lisää widgetti</string>
+    <string name="pref_header_workout">Kuntoilu</string>
+    <string name="qhybrid_calibration_1_step">1 askel</string>
+    <string name="watchface_dialog_widget_color_black">Musta</string>
+    <string name="watchface_dialog_widget_y_coordinate">Y kordinaatti (max 240)</string>
+    <string name="pref_header_generic">Geneeriset</string>
+    <string name="qhybrid_calibration_counterclockwise">Vastapäivään</string>
+    <string name="qhybrid_calibration_100_steps">100 askelta</string>
+    <string name="pref_title_developer_settings">Kehittäjä asetukset</string>
+    <string name="watchface_dialog_widget_cat_2nd_tz_widget">Toinen aikavyöhyke widgetti</string>
+    <string name="watchface_dialog_widget_x_coordinate">X kordinaatti (max 240)</string>
+    <string name="miband2_prefs_dateformat">Aika formaatti</string>
+    <string name="qhybrid_calibration_10_steps">10 askelta</string>
+    <string name="watchface_widget_type_steps">Askeleet</string>
+    <string name="pref_header_display">Näyttö</string>
+    <string name="qhybrid_calibration_clockwise">Myötäpäivään</string>
+    <string name="watchface_dialog_widget_color_white">Valkoinen</string>
+    <string name="watchface_widget_type_date">Päivämäärä</string>
+    <string name="pref_header_sound_vibration">Ääni ja värinä</string>
+    <string name="pref_title_general_reconnectonlytoconnected">Uudelleen yhdistä vain yhdistettyihin laitteisiin</string>
+    <string name="pref_header_connection">Yhteys</string>
+    <string name="watchface_dialog_title_widget">Widgetti asetukset</string>
+    <string name="waiting_for_bluetooth">Odotetaan Bluetoothia…</string>
+    <string name="watchface_dialog_widget_cat_custom_widget">Kustomi widgetti</string>
+    <string name="watchface_dialog_widget_cat_generic">Geneerinen</string>
+    <string name="watchface_dialog_widget_cat_position">Sijainti</string>
+    <string name="appmanager_app_edit">Muokkaa</string>
+    <string name="scan_scanning_all_devices">Skannataan kaikkia laitteita</string>
+    <string name="scan_not_scanning">Ei skannata</string>
+    <string name="watchface_dialog_widget_preset_right">Oikea</string>
+    <string name="watchface_dialog_widget_color">Väri</string>
+    <string name="watchface_dialog_widget_preset_left">Vasen</string>
+    <string name="watchface_widget_type_weather">Sää</string>
+    <string name="mi2_prefs_button_action_vibrate">Kytke rannekkeen värinä</string>
+    <string name="accuracy">Tarkkuus</string>
+    <string name="balanced">Tasoitettu</string>
+    <string name="all_satellites">Kaikki Satelliittit</string>
+    <string name="speed_first">Nopeus ensins</string>
+    <string name="about_description_generic">Pilvetön copyleft libre versio suljetun lähdekoodin Android gadget-sovelluksille.</string>
+    <string name="about_activity_title_main_nopebble">Tietoja Gadgetbridge Nightlysta (Ei Pebbleä)</string>
+    <string name="gadgetbridge_running_main_nopebble">Yöllinen NoPebble GB käynnissä</string>
+    <string name="title_activity_controlcenter_main_nopebble">Gadgetbridge (Pebble-palveluntarjoajaa)</string>
+    <string name="application_name_main_nopebble">Gadgetbridge (Nightly, ei Pebble-palveluntarjoajaa)</string>
+    <string name="power_saving">Virransäästö</string>
+    <string name="custom">Muokattu</string>
+    <string name="gps_galileo">GPS + GALILEO</string>
+    <string name="accuracy_first">Tarkkuus ensin</string>
+    <string name="appmanager_watchface_activate">Aktivoi</string>
+    <string name="appmanager_app_start">Aloita</string>
+    <string name="appmanager_app_download">Lataa välimuistiin</string>
+    <string name="appmanager_download_started">Sovelluksen lataus käynnistetty</string>
+    <string name="controlcenter_get_heartrate_measurement">Hae sykkeen mittaus</string>
+    <string name="debugactivity_confirm_remove_device_preferences_title">Poista laitekohtaiset mukautukset?</string>
+    <string name="debugactivity_confirm_remove_device_preferences">Tämä poistaa laitekohtaiset mukautukset kaikista yhdistetyistä laitteista. Oletko varma?</string>
+    <string name="single_band">Yksi Ranneke</string>
+    <string name="low_power_gps">Vähävirtainen GPS</string>
+    <string name="gps">GPS</string>
+    <string name="gps_bds">GPS + BDS</string>
+    <string name="appmanager_item_outdated">(vanhentunut)</string>
+    <string name="appmanager_downloaded_to_cache">Ladattu %s välimuistiin</string>
+    <string name="appmanager_download_app_error">Virhe ladataessa sovellusta</string>
+    <string name="gps_glonass">GPS + GLONASS</string>
+</resources>

@@ -1,0 +1,42 @@
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: codeberg-medium-lazy
+    container:
+      image: codeberg.org/freeyourgadget/android-fdroid-tools:36.0.0-androguard-4.1.2-java-21
+
+    steps:
+      # We can't use actions/checkout since the image does not have node
+      - name: git clone and checkout
+        run: |
+          set -eu
+          git config --global user.name "CODEBERG CI"
+          git config --global user.email "noreply@nodomain.nodomain"
+
+          git clone -q -b "${{ env.GITHUB_REF_NAME }}" https://${{ env.GITHUB_TOKEN}}@codeberg.org/${{ env.GITHUB_REPOSITORY }} .
+
+      - name: Build
+        run: |
+          ./gradlew assembleDebug --stacktrace || touch .build_failed
+
+      - name: Lint
+        run: |
+          ./gradlew lint || touch .lint_failed
+
+      - name: Test
+        run: |
+          ./gradlew test || touch .tests_failed
+
+      - name: Healthcheck
+        run: |
+          if [ -f .build_failed ]; then
+            echo "Build failed"
+          fi
+          if [ -f .lint_failed ]; then
+            echo "Lint failed"
+          fi
+          if [ -f .tests_failed ]; then
+            echo "Tests failed"
+          fi

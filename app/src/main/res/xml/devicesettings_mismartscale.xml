@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:icon="@drawable/ic_pressure"
+        android:key="pref_miscale_small_objects"
+        android:layout="@layout/preference_checkbox"
+        android:title="@string/miscale_small_objects_title"
+        android:summary="@string/miscale_small_objects_summary" />
+</androidx.preference.PreferenceScreen>

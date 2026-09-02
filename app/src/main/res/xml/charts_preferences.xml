@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- this only shows up when a device is set
+    <com.mobeta.android.dslv.DragSortListPreference
+        android:icon="@drawable/ic_tabs"
+        android:defaultValue="@array/pref_charts_tabs_items_default"
+        android:dialogTitle="@string/prefs_charts_tabs"
+        android:entries="@array/pref_charts_tabs_items"
+        android:entryValues="@array/pref_charts_tabs_values"
+        android:key="charts_tabs"
+        android:persistent="false"
+        android:summary="@string/prefs_charts_tabs_summary"
+        android:title="@string/prefs_charts_tabs" />-->
+
+    <PreferenceCategory
+        android:key="pref_charts"
+        android:title="@string/activity_prefs_charts"
+        app:iconSpaceReserved="false">
+
+        <EditTextPreference
+            android:defaultValue="250"
+            android:inputType="number"
+            android:key="chart_max_heart_rate"
+            android:maxLength="3"
+            android:title="@string/maxHR"
+            app:iconSpaceReserved="false"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            android:defaultValue="10"
+            android:inputType="number"
+            android:key="chart_min_heart_rate"
+            android:maxLength="3"
+            android:title="@string/minHR"
+            app:iconSpaceReserved="false"
+            app:useSimpleSummaryProvider="true" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="chart_heartrate_color"
+            android:layout="@layout/preference_checkbox"
+            android:summaryOff="@string/pref_chart_heartrate_color_orange"
+            android:summaryOn="@string/pref_chart_heartrate_color_red"
+            android:title="@string/pref_title_chart_heartrate_color"
+            app:iconSpaceReserved="false" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="charts_allow_swipe"
+            android:layout="@layout/preference_checkbox"
+            android:title="@string/pref_title_charts_swipe"
+            app:iconSpaceReserved="false" />
+
+        <ListPreference
+            android:defaultValue="18:00"
+            android:entries="@array/sleep_range_entries"
+            android:entryValues="@array/sleep_range_values"
+            android:key="chart_sleep_range_mode"
+            android:summary="@string/pref_summary_chart_sleep_range"
+            android:title="@string/pref_title_chart_sleep_rolling_24_hour"
+            app:iconSpaceReserved="false" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="charts_show_average"
+            android:layout="@layout/preference_checkbox"
+            android:title="@string/pref_title_charts_average"
+            app:iconSpaceReserved="false" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="charts_range"
+            android:layout="@layout/preference_checkbox"
+            android:summaryOff="@string/pref_charts_range_off"
+            android:summaryOn="@string/pref_charts_range_on"
+            android:title="@string/pref_title_charts_range"
+            app:iconSpaceReserved="false" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="charts_show_balance_sleep"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/charts_show_balance_sleep_summary"
+            android:title="@string/charts_show_balance_sleep_title"
+            app:iconSpaceReserved="false" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="charts_show_balance_steps"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/charts_show_balance_steps_summary"
+            android:title="@string/charts_show_balance_steps_title"
+            app:iconSpaceReserved="false" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="charts_show_ongoing_activity"
+            android:layout="@layout/preference_checkbox"
+            android:title="@string/show_ongoing_activity"
+            app:iconSpaceReserved="false" />
+
+        <EditTextPreference
+            android:defaultValue="6"
+            android:inputType="number"
+            android:key="chart_sleep_lines_limit"
+            android:maxLength="2"
+            android:title="@string/pref_chart_sleep_lines_limit"
+            app:iconSpaceReserved="false"
+            app:useSimpleSummaryProvider="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="pref_charts_activity_list"
+        android:title="@string/charts_activity_list"
+        app:iconSpaceReserved="false">
+
+        <EditTextPreference
+            android:defaultValue="5"
+            android:inputType="number"
+            android:key="chart_list_min_session_length"
+            android:maxLength="2"
+            android:title="@string/activity_prefs_chart_min_session_length"
+            app:iconSpaceReserved="false"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            android:defaultValue="5"
+            android:inputType="number"
+            android:key="chart_list_max_idle_phase_length"
+            android:maxLength="2"
+            android:title="@string/activity_prefs_chart_max_idle_phase_length"
+            app:iconSpaceReserved="false"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            android:defaultValue="20"
+            android:inputType="number"
+            android:key="chart_list_min_steps_per_minute"
+            android:maxLength="3"
+            android:title="@string/activity_prefs_chart_min_steps_per_minute"
+            app:iconSpaceReserved="false"
+            app:useSimpleSummaryProvider="true" />
+
+        <EditTextPreference
+            android:defaultValue="120"
+            android:inputType="number"
+            android:key="chart_list_min_steps_per_minute_for_run"
+            android:maxLength="3"
+            android:title="@string/activity_prefs_chart_min_steps_per_minute_for_run"
+            app:iconSpaceReserved="false"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="pref_category_activity_personal_title"
+        android:title="@string/activity_prefs_about_you"
+        app:iconSpaceReserved="false">
+
+        <Preference
+            android:key="pref_category_activity_personal"
+            android:title="@string/activity_prefs_about_you"
+            app:iconSpaceReserved="false" />
+    </PreferenceCategory>
+</PreferenceScreen>

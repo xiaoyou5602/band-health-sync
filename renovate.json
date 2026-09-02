@@ -1,0 +1,70 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "semanticCommits": "disabled",
+  "commitMessagePrefix": "Update",
+  "commitMessageAction": "",
+  "commitMessageTopic": "{{depName}}",
+  "labels": [
+    "dependency"
+  ],
+  "ignoreDeps": [
+    "com.github.Freeyourgadget:greendao",
+    "com.github.PhilJay:MPAndroidChart"
+  ],
+  "packageRules": [
+    {
+      "groupName": "protobuf",
+      "matchPackageNames": [
+        "com.google.protobuf:*"
+      ]
+    },
+    {
+      "groupName": "kotlin",
+      "matchPackageNames": [
+        "org.jetbrains.kotlin.*",
+        "org.jetbrains.kotlin:*"
+      ]
+    },
+    {
+      "groupName": "androidx.camera",
+      "matchPackageNames": [
+        "androidx.camera:*"
+      ]
+    },
+    {
+      "groupName": "android-emojify",
+      "matchPackageNames": [
+        "com.github.wax911.android-emojify:*"
+      ]
+    },
+    {
+      "groupName": "mapsforge",
+      "matchPackageNames": [
+        "com.github.mapsforge.mapsforge:*"
+      ]
+    },
+    {
+      "description": "solarpositioning v2 needs java 17, we need to stay on v0",
+      "allowedVersions": "<2.0",
+      "matchPackageNames": [
+        "net.e175.klaus:solarpositioning"
+      ]
+    },
+    {
+      "description": "We're running a fork of the greendao v2 generator, so we must always use the corresponding core lib",
+      "allowedVersions": "<3.0",
+      "matchPackageNames": [
+        "org.greenrobot:greendao"
+      ]
+    },
+    {
+      "matchPackageNames": [
+        "com.google.guava:guava"
+      ],
+      "versionCompatibility": "^(?<version>[^-]+)(?<compatibility>-.*)?$"
+    }
+  ]
+}

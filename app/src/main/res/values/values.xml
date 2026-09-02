@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Note: these are not translated! They are used as preference keys -->
+    <item name="p_default" type="string">default</item>
+    <item name="p_staccato" type="string">staccato</item>
+    <item name="p_short" type="string">short</item>
+    <item name="p_medium" type="string">medium</item>
+    <item name="p_long" type="string">long</item>
+    <item name="p_waterdrop" type="string">waterdrop</item>
+    <item name="p_ring" type="string">ring</item>
+    <item name="p_alarm_clock" type="string">alarm_clock</item>
+
+    <item name="p_dateformat_auto" type="string">auto</item>
+    <item name="p_dateformat_time" type="string">dateformat_time</item>
+    <item name="p_dateformat_datetime" type="string">dateformat_datetime</item>
+    <item name="p_dateformat_day_month" type="string">day_month</item>
+    <item name="p_dateformat_month_day" type="string">month_day</item>
+
+    <item name="p_clock" type="string">clock</item>
+    <item name="p_steps" type="string">steps</item>
+    <item name="p_distance" type="string">distance</item>
+    <item name="p_calories" type="string">calories</item>
+    <item name="p_heart_rate" type="string">heart_rate</item>
+    <item name="p_battery" type="string">battery</item>
+
+    <item name="p_menuitem_status" type="string">status</item>
+    <item name="p_menuitem_activity" type="string">activity</item>
+    <item name="p_menuitem_weather" type="string">weather</item>
+    <item name="p_menuitem_alarm" type="string">alarm</item>
+    <item name="p_menuitem_timer" type="string">timer</item>
+    <item name="p_menuitem_compass" type="string">compass</item>
+    <item name="p_menuitem_settings" type="string">settings</item>
+    <item name="p_menuitem_alipay" type="string">alipay</item>
+    <item name="p_menuitem_notifications" type="string">notifications</item>
+    <item name="p_menuitem_breathing" type="string">breathing</item>
+    <item name="p_menuitem_music" type="string">music</item>
+    <item name="p_menuitem_more" type="string">more</item>
+    <item name="p_menuitem_nfc" type="string">nfc</item>
+    <item name="p_menuitem_hr" type="string">hr</item>
+    <item name="p_menuitem_spo2" type="string">spo2</item>
+    <item name="p_menuitem_bloodpressure" type="string">bloodpressure</item>
+    <item name="p_menuitem_pai" type="string">pai</item>
+    <item name="p_menuitem_stress" type="string">stress</item>
+    <item name="p_menuitem_cycles" type="string">period</item>
+    <item name="p_menuitem_eventreminder" type="string">eventreminder</item>
+    <item name="p_menuitem_workout" type="string">workout</item>
+    <item name="p_menuitem_worldclock" type="string">worldclock</item>
+    <item name="p_menuitem_findphone" type="string">findphone</item>
+    <item name="p_menuitem_dnd" type="string">dnd</item>
+    <item name="p_menuitem_stopwatch" type="string">stopwatch</item>
+    <item name="p_menuitem_mutephone" type="string">mutephone</item>
+    <item name="p_menuitem_takephoto" type="string">takephoto</item>
+    <item name="p_menuitem_alexa" type="string">alexa</item>
+    <item name="p_menuitem_timer_stopwatch" type="string">timer_stopwatch</item>
+    <item name="p_menuitem_goal" type="string">goal</item>
+    <item name="p_menuitem_sleep" type="string">sleep</item>
+    <item name="p_menuitem_pomodoro" type="string">pomodoro</item>
+    <item name="p_menuitem_events" type="string">events</item>
+    <item name="p_menuitem_widgets" type="string">widgets</item>
+    <item name="p_menuitem_temperature" type="string">temperature</item>
+    <item name="p_menuitem_barometer" type="string">barometer</item>
+    <item name="p_menuitem_flashlight" type="string">flashlight</item>
+    <item name="p_menuitem_countdown" type="string">countdown</item>
+    <item name="p_menuitem_personal_activity_intelligence" type="string">personal_activity_intelligence</item>
+    <item name="p_menuitem_workout_history" type="string">workout_history</item>
+    <item name="p_menuitem_female_health" type="string">female_health</item>
+    <item name="p_menuitem_workout_status" type="string">workout_status</item>
+    <item name="p_menuitem_golf" type="string">golf</item>
+    <item name="p_menuitem_bio_charge" type="string">bio_charge</item>
+    <item name="p_menuitem_camera_remote" type="string">camera_remote</item>
+
+    <!-- currently used for sounds -->
+    <item name="p_menuitem_button" type="string">button</item>
+    <item name="p_menuitem_calls" type="string">calls</item>
+    <item name="p_menuitem_inactivity_warning" type="string">inactivity_warning</item>
+    <item name="p_menuitem_sms" type="string">sms</item>
+    <item name="p_menuitem_email" type="string">email</item>
+
+    <item name="p_off" type="string">off</item>
+    <item name="p_on" type="string">on</item>
+    <item name="p_sunset" type="string">sunset</item>
+    <item name="p_always" type="string">always</item>
+    <item name="p_automatic" type="string">automatic</item>
+    <item name="p_scheduled" type="string">scheduled</item>
+    <item name="p_smart" type="string">smart</item>
+
+    <item name="p_normal" type="string">normal</item>
+    <item name="p_sensitive" type="string">sensitive</item>
+
+    <item name="p_timeformat_auto" type="string">auto</item>
+    <item name="p_timeformat_24h" type="string">24h</item>
+    <item name="p_timeformat_am_pm" type="string">am/pm</item>
+
+    <item name="p_pebble_privacy_mode_off" type="string">off</item>
+    <item name="p_pebble_privacy_mode_content" type="string">content</item>
+    <item name="p_pebble_privacy_mode_complete" type="string">complete</item>
+
+    <item name="p_call_privacy_mode_off" type="string">off</item>
+    <item name="p_call_privacy_mode_name" type="string">name</item>
+    <item name="p_call_privacy_mode_number" type="string">number</item>
+    <item name="p_call_privacy_mode_complete" type="string">complete</item>
+
+    <item name="p_cycling" type="string">cycling</item>
+    <item name="p_activity" type="string">activity</item>
+    <item name="p_activity_list" type="string">activitylist</item>
+    <item name="p_sleep" type="string">sleep</item>
+    <item name="p_steps_week" type="string">stepsweek</item>
+    <item name="p_stress" type="string">stress</item>
+    <item name="p_pai" type="string">pai</item>
+    <item name="p_speed_zones" type="string">speedzones</item>
+    <item name="p_hrv_status" type="string">hrvstatus</item>
+    <item name="p_body_energy" type="string">bodyenergy</item>
+    <item name="p_vo2max" type="string">vo2max</item>
+    <item name="p_load" type="string">load</item>
+    <item name="p_heartrate" type="string">heartrate</item>
+    <item name="p_live_stats" type="string">livestats</item>
+    <item name="p_spo2" type="string">spo2</item>
+    <item name="p_respiratory_rate" type="string">respiratoryrate</item>
+    <item name="p_temperature" type="string">temperature</item>
+    <item name="p_weight" type="string">weight</item>
+
+    <item name="p_message_privacy_mode_off" type="string">off</item>
+    <item name="p_message_privacy_mode_complete" type="string">complete</item>
+    <item name="p_message_privacy_mode_bodyonly" type="string">bodyonly</item>
+
+    <item name="pref_button_action_disabled_value" translatable="false" type="string">UNKNOWN</item>
+    <item name="pref_media_play_value" translatable="false" type="string">PLAY</item>
+    <item name="pref_media_pause_value" translatable="false" type="string">PAUSE</item>
+    <item name="pref_media_playpause_value" translatable="false" type="string">PLAYPAUSE</item>
+    <item name="pref_media_next_value" translatable="false" type="string">NEXT</item>
+    <item name="pref_media_previous_value" translatable="false" type="string">PREVIOUS</item>
+    <item name="pref_media_volumeup_value" translatable="false" type="string">VOLUMEUP</item>
+    <item name="pref_media_volumedown_value" translatable="false" type="string">VOLUMEDOWN</item>
+    <item name="pref_media_forward_value" translatable="false" type="string">FORWARD</item>
+    <item name="pref_media_rewind_value" translatable="false" type="string">REWIND</item>
+    <item name="pref_device_action_broadcast_value" translatable="false" type="string">BROADCAST</item>
+    <item name="pref_device_action_fitness_app_control_start_value" translatable="false" type="string">FITNESS_CONTROL_START</item>
+    <item name="pref_device_action_fitness_app_control_stop_value" translatable="false" type="string">FITNESS_CONTROL_STOP</item>
+    <item name="pref_device_action_fitness_app_control_toggle_value" translatable="false" type="string">FITNESS_CONTROL_TOGGLE</item>
+    <item name="pref_device_action_dnd_off_value" translatable="false" type="string">DO_NOT_DISTURB_OFF</item>
+    <item name="pref_device_action_dnd_priority_value" translatable="false" type="string">DO_NOT_DISTURB_PRIORITY</item>
+    <item name="pref_device_action_dnd_alarms_value" translatable="false" type="string">DO_NOT_DISTURB_ALARMS</item>
+    <item name="pref_device_action_dnd_on_value" translatable="false" type="string">DO_NOT_DISTURB_ON</item>
+
+    <item name="pref_theme_value_system" translatable="false" type="string">system</item>
+    <item name="pref_theme_value_light" translatable="false" type="string">light</item>
+    <item name="pref_theme_value_dark" translatable="false" type="string">dark</item>
+    <item name="pref_theme_value_dynamic" translatable="false" type="string">dynamic</item>
+
+</resources>

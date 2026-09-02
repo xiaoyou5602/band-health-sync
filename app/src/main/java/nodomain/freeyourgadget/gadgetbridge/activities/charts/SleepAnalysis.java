@@ -1,0 +1,212 @@
+/*  Copyright (C) 2019-2024 José Rebelo, Petr Vaněk, Q-er
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.activities.charts;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+import nodomain.freeyourgadget.gadgetbridge.model.ActivityAmount;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivityAmounts;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivitySample;
+
+public class SleepAnalysis {
+
+    public static final long MIN_SESSION_LENGTH = 5 * 60;
+    public static final long MAX_WAKE_PHASE_LENGTH = 60 * 60;
+
+    public List<SleepSession> calculateSleepSessions(Iterable<? extends ActivitySample> samples) {
+        List<SleepSession> result = new ArrayList<>();
+
+        ActivitySample previousSample = null;
+        Date sleepStart = null;
+        Date sleepEnd = null;
+        long lightSleepDuration = 0;
+        long deepSleepDuration = 0;
+        long remSleepDuration = 0;
+        long awakeSleepDuration = 0;
+        long durationSinceLastSleep = 0;
+
+        for (ActivitySample sample : samples) {
+            if (isSleep(sample)) {
+                if (sleepStart == null)
+                    sleepStart = getDateFromSample(sample);
+                else
+                    awakeSleepDuration += durationSinceLastSleep;
+                sleepEnd = getDateFromSample(sample);
+
+                durationSinceLastSleep = 0;
+            } else if (sleepStart != null) {
+                final long gap = previousSample != null ? sample.getTimestamp() - previousSample.getTimestamp() : 0;
+                final int steps = sample.getSteps();
+                final boolean hasActivity = steps > 0 && steps != ActivitySample.NOT_MEASURED;
+                if (hasActivity || durationSinceLastSleep + gap > MAX_WAKE_PHASE_LENGTH) {
+                    final long durationLengths = lightSleepDuration + deepSleepDuration + remSleepDuration + awakeSleepDuration;
+                    if (sleepEnd.getTime() - sleepStart.getTime() > MIN_SESSION_LENGTH && durationLengths > MIN_SESSION_LENGTH)
+                        result.add(new SleepSession(sleepStart, sleepEnd, lightSleepDuration, deepSleepDuration, remSleepDuration, awakeSleepDuration));
+                    sleepStart = null;
+                    sleepEnd = null;
+                    lightSleepDuration = 0;
+                    deepSleepDuration = 0;
+                    remSleepDuration = 0;
+                    awakeSleepDuration = 0;
+                }
+            }
+
+            if (previousSample != null) {
+                long durationSinceLastSample = sample.getTimestamp() - previousSample.getTimestamp();
+                if (sample.getKind() == ActivityKind.LIGHT_SLEEP) {
+                    lightSleepDuration += durationSinceLastSample;
+                } else if (sample.getKind() == ActivityKind.DEEP_SLEEP) {
+                    deepSleepDuration += durationSinceLastSample;
+                } else if (sample.getKind() == ActivityKind.REM_SLEEP) {
+                    remSleepDuration += durationSinceLastSample;
+                } else if (sample.getKind() == ActivityKind.AWAKE_SLEEP) {
+                    awakeSleepDuration += durationSinceLastSample;
+                } else {
+                    durationSinceLastSleep += durationSinceLastSample;
+                    if (sleepStart != null) {
+                        if (durationSinceLastSleep > MAX_WAKE_PHASE_LENGTH) {
+                            if (lightSleepDuration + deepSleepDuration + remSleepDuration + awakeSleepDuration > MIN_SESSION_LENGTH)
+                                result.add(new SleepSession(sleepStart, sleepEnd, lightSleepDuration, deepSleepDuration, remSleepDuration, awakeSleepDuration));
+                            sleepStart = null;
+                            sleepEnd = null;
+                            lightSleepDuration = 0;
+                            deepSleepDuration = 0;
+                            remSleepDuration = 0;
+                            awakeSleepDuration = 0;
+                        }
+                    }
+                }
+            }
+
+            previousSample = sample;
+        }
+        if (lightSleepDuration + deepSleepDuration + remSleepDuration + awakeSleepDuration > MIN_SESSION_LENGTH) {
+            result.add(new SleepSession(sleepStart, sleepEnd, lightSleepDuration, deepSleepDuration, remSleepDuration, awakeSleepDuration));
+        }
+        return result;
+    }
+
+    public List<SleepSession> calculateSleepSessionsForWakeDate(
+            Iterable<? extends ActivitySample> samples,
+            Calendar wakeDate
+    ) {
+        List<SleepSession> result = new ArrayList<>();
+        for (SleepSession session : calculateSleepSessions(samples)) {
+            if (session.getSleepEnd() != null && isSameDay(session.getSleepEnd(), wakeDate)) {
+                result.add(session);
+            }
+        }
+        return result;
+    }
+
+    public ActivityAmounts calculateSleepAmountsForWakeDate(
+            Iterable<? extends ActivitySample> samples,
+            Calendar wakeDate
+    ) {
+        ActivityAmount lightSleep = new ActivityAmount(ActivityKind.LIGHT_SLEEP);
+        ActivityAmount deepSleep = new ActivityAmount(ActivityKind.DEEP_SLEEP);
+        ActivityAmount remSleep = new ActivityAmount(ActivityKind.REM_SLEEP);
+        ActivityAmount awakeSleep = new ActivityAmount(ActivityKind.AWAKE_SLEEP);
+
+        for (SleepSession session : calculateSleepSessionsForWakeDate(samples, wakeDate)) {
+            lightSleep.addSeconds(session.getLightSleepDuration());
+            deepSleep.addSeconds(session.getDeepSleepDuration());
+            remSleep.addSeconds(session.getRemSleepDuration());
+            awakeSleep.addSeconds(session.getAwakeSleepDuration());
+        }
+
+        ActivityAmounts result = new ActivityAmounts();
+        result.addAmount(lightSleep);
+        result.addAmount(deepSleep);
+        result.addAmount(remSleep);
+        result.addAmount(awakeSleep);
+        if (result.getTotalSeconds() > 0) {
+            result.calculatePercentages();
+        }
+        return result;
+    }
+
+    private boolean isSameDay(Date date, Calendar day) {
+        Calendar calendar = Calendar.getInstance(day.getTimeZone());
+        calendar.setTime(date);
+        return calendar.get(Calendar.YEAR) == day.get(Calendar.YEAR)
+                && calendar.get(Calendar.DAY_OF_YEAR) == day.get(Calendar.DAY_OF_YEAR);
+    }
+
+    private boolean isSleep(ActivitySample sample) {
+        return sample.getKind() == ActivityKind.DEEP_SLEEP ||
+                sample.getKind() == ActivityKind.LIGHT_SLEEP ||
+                sample.getKind() == ActivityKind.REM_SLEEP ||
+                sample.getKind() == ActivityKind.AWAKE_SLEEP;
+    }
+
+    private Date getDateFromSample(ActivitySample sample) {
+        return new Date(sample.getTimestamp() * 1000L);
+    }
+
+
+    public static class SleepSession {
+        private final Date sleepStart;
+        private final Date sleepEnd;
+        private final long lightSleepDuration;
+        private final long deepSleepDuration;
+        private final long remSleepDuration;
+        private final long awakeSleepDuration;
+
+        private SleepSession(Date sleepStart,
+                             Date sleepEnd,
+                             long lightSleepDuration,
+                             long deepSleepDuration,
+                             long remSleepDuration,
+                             long awakeSleepDuration) {
+            this.sleepStart = sleepStart;
+            this.sleepEnd = sleepEnd;
+            this.lightSleepDuration = lightSleepDuration;
+            this.deepSleepDuration = deepSleepDuration;
+            this.remSleepDuration = remSleepDuration;
+            this.awakeSleepDuration = awakeSleepDuration;
+        }
+
+        public Date getSleepStart() {
+            return sleepStart;
+        }
+
+        public Date getSleepEnd() {
+            return sleepEnd;
+        }
+
+        public long getLightSleepDuration() {
+            return lightSleepDuration;
+        }
+
+        public long getDeepSleepDuration() {
+            return deepSleepDuration;
+        }
+
+        public long getRemSleepDuration() {
+            return remSleepDuration;
+        }
+
+        public long getAwakeSleepDuration() {
+            return awakeSleepDuration;
+        }
+    }
+}

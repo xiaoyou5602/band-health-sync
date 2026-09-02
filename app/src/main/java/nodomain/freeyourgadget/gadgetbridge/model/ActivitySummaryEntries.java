@@ -1,0 +1,401 @@
+/*  Copyright (C) 2024 José Rebelo
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.model;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import nodomain.freeyourgadget.gadgetbridge.R;
+
+public class ActivitySummaryEntries {
+    public static final String STATUS = "status";
+    public static final String TYPE = "watchface_dialog_widget_type"; // TODO: change this?
+
+    public static final String ACTIVITY_TYPE_CODE = "activity_type_code";
+
+    public static final String TIME_START = "startTime";
+    public static final String TIME_END = "endTime";
+    public static final String ACTIVE_SECONDS = "activeSeconds";
+
+    public static final String ALTITUDE_AVG = "averageAltitude";
+    public static final String ALTITUDE_BASE = "baseAltitude";
+    public static final String ALTITUDE_MAX = "maxAltitude";
+    public static final String ALTITUDE_MIN = "minAltitude";
+
+    public static final String TOTAL_ASCENT = "activityTotalAscent";
+    public static final String TOTAL_DESCENT = "activityTotalDescent";
+    public static final String AVERAGE_ASCENT_VELOCITY = "average_ascent_velocity";
+    public static final String ASCENT_DISTANCE = "ascentDistance";
+    public static final String ASCENT_METERS = "ascentMeters";
+    public static final String ASCENT_SECONDS = "ascentSeconds";
+    public static final String DESCENT_DISTANCE = "descentDistance";
+    public static final String DESCENT_METERS = "descentMeters";
+    public static final String DESCENT_SECONDS = "descentSeconds";
+    public static final String FLAT_DISTANCE = "flatDistance";
+    public static final String FLAT_SECONDS = "flatSeconds";
+
+    public static final String STEP_RATE_SUM = "stepRateSum";
+    public static final String STEP_RATE_AVG = "stepRateAvg";
+    public static final String STEP_RATE_MAX = "stepRateMax";
+    public static final String STEP_LENGTH_AVG = "stepLengthAvg";
+
+    public static final String CADENCE_AVG = "averageCadence";
+    public static final String CADENCE_MAX = "maxCadence";
+    public static final String CADENCE_MIN = "minCadence";
+
+    public static final String SPEED_AVG = "averageSpeed";
+    public static final String SPEED_MAX = "maxSpeed";
+    public static final String SPEED_MIN = "minSpeed";
+
+    public static final String GROUND_CONTACT_TIME_AVG = "groundContactTimeAvg";
+    public static final String IMPACT_AVG = "impactAvg";
+    public static final String IMPACT_MAX = "impactMax";
+    public static final String SWING_ANGLE_AVG = "swingAngleAvg";
+    public static final String FORE_FOOT_LANDINGS = "foreFootLandings";
+    public static final String MID_FOOT_LANDINGS = "midFootLandings";
+    public static final String BACK_FOOT_LANDINGS = "backFootLandings";
+    public static final String EVERSION_ANGLE_AVG = "eversionAngleAvg";
+    public static final String EVERSION_ANGLE_MAX = "eversionAngleMax";
+
+    public static final String TRAINING_LOAD = "training_load";
+    public static final String STANDING_TIME = "standing_time";
+    public static final String STANDING_COUNT = "standing_count";
+    public static final String AVG_LEFT_PCO = "average_left_platform_center_offset";
+    public static final String AVG_RIGHT_PCO = "average_right_platform_center_offset";
+    public static final String AVG_LEFT_POWER_PHASE = "average_left_power_phase";
+    public static final String AVG_LEFT_POWER_PHASE_PEAK = "average_left_power_phase_peak";
+    public static final String AVG_RIGHT_POWER_PHASE = "average_right_power_phase";
+    public static final String AVG_RIGHT_POWER_PHASE_PEAK = "average_right_power_phase_peak";
+    public static final String AVG_POWER = "average_power";
+    public static final String AVG_POWER_SEATING = "average_power_sitting";
+    public static final String AVG_POWER_STANDING = "average_power_standing";
+    public static final String AVG_CADENCE_SEATING = "average_cadence_sitting";
+    public static final String AVG_CADENCE_STANDING = "average_cadence_standing";
+    public static final String MAX_POWER = "max_power";
+    public static final String MAX_POWER_SEATING = "max_power_sitting";
+    public static final String MAX_POWER_STANDING = "max_power_standing";
+    public static final String MAX_CADENCE_SEATING = "max_cadence_sitting";
+    public static final String MAX_CADENCE_STANDING = "max_cadence_standing";
+    public static final String NORMALIZED_POWER = "normalized_power";
+    public static final String INTENSITY_FACTOR = "intensity_factor";
+    public static final String TRAINING_STRESS_SCORE = "training_stress_score";
+    public static final String LEFT_RIGHT_BALANCE = "left_right_balance";
+    public static final String AVG_PEDAL_SMOOTHNESS = "average_pedal_smoothness";
+    public static final String AVG_TORQUE_EFFECTIVENESS = "average_torque_effectiveness";
+    public static final String FRONT_GEAR_SHIFTS = "front_gear_shifts";
+    public static final String REAR_GEAR_SHIFTS = "rear_gear_shifts";
+    public static final String ACTIVE_SCORE = "workout_active_score";
+    public static final String SOLAR_INTENSITY = "solar_intensity";
+    public static final String BATTERY_GAIN = "battery_gain";
+    public static final String MOUNTAIN_BIKE_GRIT_SCORE = "mountain_bike_grit_score";
+    public static final String MOUNTAIN_BIKE_FLOW_SCORE = "mountain_bike_flow_score";
+
+    public static final String AVG_VERTICAL_OSCILLATION = "vertical_oscillation";
+    public static final String MAX_VERTICAL_OSCILLATION = "max_vertical_oscillation";
+    public static final String MIN_VERTICAL_OSCILLATION = "min_vertical_oscillation";
+    public static final String AVG_GROUND_CONTACT_TIME = "ground_contact_time";
+    public static final String MIN_GROUND_CONTACT_TIME = "min_ground_contact_time";
+    public static final String AVG_VERTICAL_RATIO = "vertical_ratio";
+    public static final String MIN_VERTICAL_RATIO = "min_vertical_ratio";
+    public static final String AVG_GROUND_CONTACT_TIME_BALANCE = "ground_contact_time_balance";
+    public static final String STEP_SPEED_LOSS = "running_step_speed_loss";
+    public static final String STEP_SPEED_LOSS_PERCENTAGE = "running_step_speed_loss_percentage";
+
+    public static final String DISTANCE_METERS = "distanceMeters";
+    public static final String POOL_LENGTH = "poolLength";
+    public static final String ELEVATION_GAIN = "elevationGain";
+    public static final String ELEVATION_LOSS = "elevationLoss";
+
+    public static final String HR_AVG = "averageHR";
+    public static final String HR_MAX = "maxHR";
+    public static final String HR_MIN = "minHR";
+    public static final String HR_USER_RESTING = "hr_user_resting";
+    public static final String HR_USER_MAX = "hr_user_max";
+    public static final String HR_ZONE_NA = "hrZoneNa";
+    public static final String HR_ZONE_WARM_UP = "hrZoneWarmUp";
+    public static final String HR_ZONE_EASY = "hrZoneEasy";
+    public static final String HR_ZONE_FAT_BURN = "hrZoneFatBurn";
+    public static final String HR_ZONE_AEROBIC = "hrZoneAerobic";
+    public static final String HR_ZONE_ANAEROBIC = "hrZoneAnaerobic";
+    public static final String HR_ZONE_THRESHOLD = "hrZoneThreshold";
+    public static final String HR_ZONE_EXTREME = "hrZoneExtreme";
+    public static final String HR_ZONE_MAXIMUM = "hrZoneMaximum";
+
+    public static final String TEMPERATURE_AVG = "avg_temperature";
+    public static final String TEMPERATURE_MIN = "min_temperature";
+    public static final String TEMPERATURE_MAX = "max_temperature";
+    public static final String RESPIRATION_AVG = "average_respiration_rate";
+    public static final String RESPIRATION_MAX = "max_respiration_rate";
+    public static final String RESPIRATION_MIN = "min_respiration_rate";
+    public static final String SPO2_AVG = "menuitem_spo2";
+    public static final String STRESS_AVG = "menuitem_stress";
+    public static final String HRV_SDRR = "hrv_sdrr";
+    public static final String HRV_RMSSD = "hrv_rmssd";
+
+    public static final String LANE_LENGTH = "laneLength";
+    public static final String LAPS = "laps";
+    public static final String LAP_PACE_AVERAGE = "averageLapPace";
+
+    public static final String PACE_AVG_SECONDS_KM = "averageKMPaceSeconds";
+    public static final String PACE_MAX = "maxPace";
+    public static final String PACE_MIN = "minPace";
+    public static final String STEPS = "steps";
+    public static final String STRIDE_AVG = "averageStride";
+    public static final String STRIDE_MAX = "maxStride";
+    public static final String STRIDE_MIN = "minStride";
+    public static final String STRIDE_TOTAL = "totalStride";
+
+    public static final String STROKE_DISTANCE_AVG = "averageStrokeDistance";
+    public static final String STROKE_AVG_PER_SECOND = "averageStrokesPerSecond";
+    public static final String STROKE_RATE_AVG = "avgStrokeRate";
+    public static final String STROKE_RATE_MAX = "maxStrokeRate";
+    public static final String STROKE_RATE_MIN = "minStrokeRate";
+    public static final String STROKES = "strokes";
+
+    public static final String JUMP_RATE_AVG = "avgJumpRate";
+    public static final String JUMP_RATE_MAX = "maxJumpRate";
+    public static final String JUMPS = "totalJumps";
+    public static final String JUMP_ROPE_LONGEST_STREAK = "jump_rope_longest_streak";
+    public static final String JUMP_ROPE_INTERRUPTIONS = "jump_rope_interruptions";
+
+    public static final String SWIM_STYLE = "swimStyle";
+    public static final String SWOLF_INDEX = "swolfIndex";
+    public static final String SWOLF_AVG = "swolfAvg";
+    public static final String SWOLF_MAX = "swolfMax";
+    public static final String SWOLF_MIN = "swolfMin";
+    public static final String SWIM_AVG_CADENCE = "swim_avg_cadence";
+
+    // Dietary intake kcal (food eaten), NOT energy expenditure. Sourced from Garmin FIT
+    // session.calories_consumed. Distinct from the three "expended" counters below.
+    public static final String CALORIES_CONSUMED = "calories_consumed";
+    // Active kcal expended by the workout, excluding basal metabolic rate. The headline
+    // number shown on the watch workout card on Xiaomi devices.
+    public static final String CALORIES_BURNT = "active_calories";
+    // Active + resting kcal over the workout window (CALORIES_BURNT + CALORIES_RESTING).
+    // Not emitted by every device or workout type.
+    public static final String CALORIES_TOTAL = "caloriesBurnt";
+    // Basal metabolic kcal accrued during the workout window (CALORIES_TOTAL - CALORIES_BURNT).
+    public static final String CALORIES_RESTING = "restingCalories";
+
+    public static final String TRAINING_EFFECT_AEROBIC = "aerobicTrainingEffect";
+    public static final String TRAINING_EFFECT_ANAEROBIC = "anaerobicTrainingEffect";
+    public static final String TRAINING_EFFECT_TOTAL = "training_effect_total";
+    public static final String WORKOUT_LOAD = "currentWorkoutLoad";
+    public static final String MAXIMUM_OXYGEN_UPTAKE = "maximumOxygenUptake";
+    public static final String RECOVERY_TIME = "recoveryTime";
+    public static final String RECOVERY_HR = "recoveryHr";
+    public static final String VITALITY_GAIN = "vitality_gain";
+    public static final String THROWS_LOW = "workout_throws_low";
+    public static final String THROWS_MEDIUM = "workout_throws_medium";
+    public static final String THROWS_HIGH = "workout_throws_high";
+    public static final String DISTANCE_GOAL = "workout_distance_goal";
+    public static final String DISTANCE_GOAL_PERCENT = "workout_distance_goal_percent";
+    public static final String DISTANCE_METERS_CALIBRATED = "workout_distance_meters_calibrated";
+    public static final String TIME_GOAL = "configuredTimeGoal";
+    public static final String CALORIES_GOAL = "configuredCaloriesGoal";
+    public static final String CALORIES_GOAL_MAX = "maximumCaloriesGoal";
+    public static final String PACE_GOAL = "configuredPaceGoal";
+    public static final String SPEED_GOAL = "configuredSpeedGoal";
+    public static final String CADENCE_GOAL = "configuredCadenceGoal";
+    public static final String LENGTHS_GOAL = "configuredLengthsGoal";
+    public static final String ACTIVE_CALORIES_GOAL = "active_calories_goal";
+    public static final String GOAL_COUNT = "goalCount";
+    public static final String GROUP_COUNT = "groupCount";
+    public static final String V02MAX_LEVEL = "v02maxLevel";
+    public static final String PROJECTED_TIME_5KM = "projectedTime5km";
+    public static final String PROJECTED_TIME_10KM = "projectedTime10km";
+    public static final String PROJECTED_TIME_HALF_MARATHON = "projectedTimeHalfMarathon";
+    public static final String PROJECTED_TIME_MARATHON = "projectedTimeMarathon";
+    public static final String PUNCH_TOTAL = "totalPunchCount";
+    public static final String PUNCH_PERFECT = "perfectPunchCount";
+    public static final String PUNCH_GOOD = "goodPunchCount";
+    public static final String PUNCH_MISS = "missPunchCount";
+    public static final String TIME_GOAL_PERCENT = "time_goal_percent";
+    public static final String CALORIES_GOAL_PERCENT = "calories_goal_percent";
+    public static final String PACE_GOAL_PERCENT = "pace_goal_percent";
+    public static final String SPEED_GOAL_PERCENT = "speed_goal_percent";
+    public static final String CADENCE_GOAL_PERCENT = "cadence_goal_percent";
+    public static final String LENGTHS_GOAL_PERCENT = "lengths_goal_percent";
+    public static final String FLUID_CONSUMED = "fluid_consumed";
+    public static final String ESTIMATED_SWEAT_LOSS = "estimatedSweatLoss";
+    public static final String LACTATE_THRESHOLD_HR = "lactateThresholdHeartRate";
+    public static final String RATING_OF_PERCEIVED_EXERTION = "ratingOfPerceivedExertion";
+    public static final String WORKOUT_FEEL = "workout_feel";
+
+    public static final String CYCLING_POWER_AVERAGE = "cyclingPowerAverage";
+    public static final String CYCLING_POWER_MIN = "cyclingPowerMin";
+    public static final String CYCLING_POWER_MAX = "cyclingPowerMax";
+
+
+    public static final String MOVEMENT_CONSISTENCY = "movementConsistency";
+    public static final String MOVEMENT_STABILITY = "movementStability";
+    public static final String MOVEMENT_CONTINUITY = "movementContinuity";
+    public static final String MOVEMENT_RHYTHM = "movementRhythm";
+    public static final String MOVEMENT_SPEED_DECAY = "movementSpeedDecay";
+
+    public static final String SETS = "workoutSets";
+    public static final String REPETITIONS = "workout_repetitions";
+    public static final String REVOLUTIONS = "workout_revolutions";
+
+    public static final String UNIT_BPM = "bpm";
+    public static final String UNIT_BREATHS_PER_MIN = "breaths_per_min";
+    public static final String UNIT_CM = "cm";
+    public static final String UNIT_UNIX_EPOCH_SECONDS = "unix_epoch_seconds";
+    public static final String UNIT_KCAL = "calories_unit";
+    public static final String UNIT_KCAL_PER_DAY = "unit_kcal_per_day";
+    public static final String UNIT_ML = "ml";
+    public static final String UNIT_LAPS = "laps_unit";
+    public static final String UNIT_KILOMETERS = "km";
+    public static final String UNIT_METERS = "meters";
+    public static final String UNIT_PERCENTAGE = "%";
+    public static final String UNIT_ML_KG_MIN = "ml/kg/min";
+    public static final String UNIT_NONE = "";
+    public static final String UNIT_HOURS = "hours";
+    public static final String UNIT_SECONDS = "seconds";
+    public static final String UNIT_MILLISECONDS = "milliseconds_ms";
+    public static final String UNIT_SECONDS_PER_KM = "seconds_km";
+    public static final String UNIT_MINUTES_PER_KM = "minutes_km";
+    public static final String UNIT_SECONDS_PER_M = "seconds_m";
+    public static final String UNIT_CENTIMETERS_PER_SECOND = "centimeters_second";
+    public static final String UNIT_METERS_PER_SECOND = "meters_second";
+    public static final String UNIT_METERS_PER_HOUR = "meters_per_hour";
+    public static final String UNIT_KMPH = "km_h";
+    public static final String UNIT_SPM = "spm";
+    public static final String UNIT_STEPS = "steps_unit";
+    public static final String UNIT_STROKES = "strokes_unit";
+    public static final String UNIT_STROKES_PER_MINUTE = "strokes_minute";
+    public static final String UNIT_STROKES_PER_SECOND = "strokes_second";
+    public static final String UNIT_STROKES_PER_LENGTH = "strokes_per_length";
+    public static final String UNIT_JUMPS = "jumps_unit";
+    public static final String UNIT_REPS = "unit_repetitions";
+    public static final String UNIT_REVS = "unit_revolutions";
+    public static final String UNIT_JUMPS_PER_MINUTE = "jumps_minute";
+    public static final String UNIT_REPS_PER_MINUTE = "unit_repetitions_per_minute";
+    public static final String UNIT_REVS_PER_MINUTE = "unit_revolutions_per_minute";
+    public static final String UNIT_YARD = "yard";
+    public static final String UNIT_DEGREES = "degrees";
+    public static final String UNIT_STRING = "string";
+    public static final String UNIT_RAW_STRING = "raw_string";
+    public static final String UNIT_KG = "kg";
+    public static final String UNIT_LB = "lb";
+    public static final String UNIT_RPM = "unit_rpm";
+    public static final String UNIT_MM = "unit_millimeter";
+    public static final String UNIT_WATT = "unit_watt";
+    public static final String UNIT_JOULE = "unit_joule";
+    public static final String UNIT_AMPERE = "unit_ampere";
+    public static final String UNIT_AMPERE_HOUR = "unit_ampere_hour";
+    public static final String UNIT_MINUTES_PER_100_METERS = "minutes_100m";
+    public static final String UNIT_SECONDS_PER_100_METERS = "seconds_100m";
+    public static final String UNIT_MINUTES_PER_500_METERS = "minutes_500m";
+    public static final String UNIT_SECONDS_PER_500_METERS = "seconds_500m";
+    public static final String UNIT_MINUTES_PER_100_YARDS = "minutes_100yd";
+    public static final String UNIT_SECONDS_PER_100_YARDS = "seconds_100yd";
+    public static final String UNIT_NAUTICAL_MILES = "nautical_miles";
+    public static final String UNIT_KNOTS = "knots";
+    public static final String UNIT_CELSIUS = "unit_celsius";
+    public static final String UNIT_OXYGEN_TOXICITY_UNITs = "unit_oxygen_toxicity_units";
+    public static final String UNIT_BAR_PER_MINUTE = "unit_bar_per_minute";
+    public static final String UNIT_VOLT = "unit_volt";
+    public static final String UNIT_KG_PER_M3 = "unit_kg_per_m3";
+    public static final String UNIT_BAR = "unit_bar";
+    public static final String UNIT_LITER = "unit_liter";
+    /// UNIX epoc seconds to be formated in local time without showing date
+    public static final String UNIT_EPOC_TIME = "unit_epoc_time";
+    /// display time including milliseconds if any
+    public static final String UNIT_SECONDS_SPORT = "unit_sports_seconds";
+    public static final String UNIT_FOOT = "ft";
+    public static final String UNIT_FOOT_PER_HOUR = "foot_per_hour";
+    public static final String UNIT_MILE = "mi";
+    public static final String UNIT_MILE_PER_HOUR = "mi_h";
+    public static final String UNIT_MINUTES_PER_MILE = "minutes_mi";
+
+    public static final String GROUP_PACE = "Pace";
+    public static final String GROUP_ACTIVITY = "Activity";
+    public static final String GROUP_SPEED = "Speed";
+    public static final String GROUP_CADENCE = "workout_cadence";
+    public static final String GROUP_ELEVATION = "Elevation";
+    public static final String GROUP_POWER = "workout_power";
+    public static final String GROUP_HEART_RATE = "heart_rate";
+    public static final String GROUP_RESPIRATORY_RATE = "respiratoryrate";
+    public static final String GROUP_TEMPERATURE = "menuitem_temperature";
+    public static final String GROUP_OTHER = "Other";
+    public static final String GROUP_HEART_RATE_ZONES = "HeartRateZones";
+    public static final String GROUP_STROKES = "Strokes";
+    public static final String GROUP_THROWS = "Throws";
+    public static final String GROUP_JUMPS = "Jumps";
+    public static final String GROUP_CYCLING = "cycling";
+    public static final String GROUP_SWIMMING = "Swimming";
+    public static final String GROUP_TRAINING_EFFECT = "TrainingEffect";
+    public static final String GROUP_LAPS = "laps";
+    public static final String GROUP_RUNNING_FORM = "RunningForm";
+    public static final String GROUP_INTERVALS = "workout_intervals";
+    public static final String GROUP_DIVING = "activity_type_diving";
+    public static final String GROUP_RECOVERY_HEART_RATE = "recovery_heart_rate";
+    public static final String GROUP_MOVEMENT_EVALUATION = "movement_evaluation";
+    public static final String GROUP_DISTANCE = "Distance";
+    public static final String GROUP_STEPS = "Steps";
+    public static final String GROUP_BIKE = "activity_type_biking";
+    public static final String GROUP_GEAR_INFO = "Gear";
+    public static final String GROUP_GOALS = "goals";
+    public static final String GROUP_PREDICTIONS = "predictions";
+    public static final String GROUP_PUNCHES = "punches";
+    public static final String AVG_DEPTH = "diving_avg_depth";
+    public static final String START_CNS = "diving_start_cns";
+    public static final String END_CNS = "diving_end_cns";
+    public static final String START_N2 = "diving_start_n2";
+    public static final String END_N2 = "diving_end_n2";
+    public static final String DIVE_NUMBER = "dive_number";
+    public static final String BOTTOM_TIME = "diving_bottom_time";
+    public static final String OXYGEN_TOXICITY = "diving_oxygen_toxicity";
+    public static final String SURFACE_INTERVAL = "diving_surface_interval";
+    public static final String PRESSURE_SAC_AVG = "diving_pressure_sac_avg";
+    public static final String RECOVERY_TIME_REMAINING_AT_START = "recovery_time_remaining_at_start";
+    public static final String BODY_ENERGY_AT_START = "body_energy_at_start";
+    public static final String BODY_ENERGY_AT_END = "body_energy_at_end";
+    public static final String STAMINA_AT_START = "stamina_at_start";
+    public static final String STAMINA_AT_END = "stamina_at_end";
+    public static final String STAMINA_MIN = "stamina_min";
+    public static final String TOTAL_WORK = "total_work";
+    public static final String BATTERY_LEVEL_START = "battery_level_start";
+    public static final String BATTERY_LEVEL_END = "battery_level_end";
+    public static final String BATTERY_LEVEL_EBIKE_START = "battery_level_ebike_start";
+    public static final String BATTERY_LEVEL_EBIKE_END = "battery_level_ebike_end";
+    // DIVING parameters
+    public static final String MAX_DEPTH = "diving_maximum_diving_depth";
+    public static final String WATER_TYPE = "diving_water_type";
+    public static final String GROUP_GAS = "diving_gas";
+    public static final String DIVING_HANG_TIME = "diving_hang_time";
+
+    /**
+     * Used to signal that this activity has a gps track. This is currently used by ActivitySummaryDetail
+     * to display the share and view gpx buttons, even though there's no gpx file.
+     * FIXME: We should have a cleaner way of doing this.
+     */
+    public static final String INTERNAL_HAS_GPS = "internal_hasGps";
+
+    public static final Map<String, Integer> HR_ZONES = new LinkedHashMap<>() {{
+        put(HR_ZONE_NA, 0);
+        put(HR_ZONE_WARM_UP, R.color.hr_zone_warm_up_color);
+        put(HR_ZONE_EASY, R.color.hr_zone_easy_color);
+        put(HR_ZONE_FAT_BURN, R.color.hr_zone_easy_color);
+        put(HR_ZONE_AEROBIC, R.color.hr_zone_aerobic_color);
+        put(HR_ZONE_ANAEROBIC, R.color.hr_zone_threshold_color);
+        put(HR_ZONE_THRESHOLD, R.color.hr_zone_threshold_color);
+        put(HR_ZONE_EXTREME, R.color.hr_zone_maximum_color);
+        put(HR_ZONE_MAXIMUM, R.color.hr_zone_maximum_color);
+    }};
+}

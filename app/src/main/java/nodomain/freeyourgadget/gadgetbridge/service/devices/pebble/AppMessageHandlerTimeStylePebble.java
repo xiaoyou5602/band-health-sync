@@ -1,0 +1,173 @@
+/*  Copyright (C) 2015-2024 Andreas Shimokawa, Daniele Gobbetti, José Rebelo
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.service.devices.pebble;
+
+import android.util.Pair;
+import android.widget.Toast;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.UUID;
+
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEvent;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventSendBytes;
+import nodomain.freeyourgadget.gadgetbridge.model.WeatherSpec;
+import nodomain.freeyourgadget.gadgetbridge.model.weather.Weather;
+import nodomain.freeyourgadget.gadgetbridge.util.GB;
+
+class AppMessageHandlerTimeStylePebble extends AppMessageHandler {
+
+    private static final int ICON_CLEAR_DAY = 0;
+    private static final int ICON_CLEAR_NIGHT = 1;
+    private static final int ICON_CLOUDY_DAY = 2;
+    private static final int ICON_HEAVY_RAIN = 3;
+    private static final int ICON_HEAVY_SNOW = 4;
+    private static final int ICON_LIGHT_RAIN = 5;
+    private static final int ICON_LIGHT_SNOW = 6;
+    private static final int ICON_PARTLY_CLOUDY_NIGHT = 7;
+    private static final int ICON_PARTLY_CLOUDY = 8;
+    private static final int ICON_RAINING_AND_SNOWING = 9;
+    private static final int ICON_THUNDERSTORM = 10;
+    private static final int ICON_WEATHER_GENERIC = 11;
+
+    AppMessageHandlerTimeStylePebble(UUID uuid, PebbleProtocol pebbleProtocol) {
+        super(uuid, pebbleProtocol);
+        messageKeys = new HashMap<>();
+        try {
+            JSONObject appKeys = getAppKeys();
+            Iterator<String> appKeysIterator = appKeys.keys();
+            while (appKeysIterator.hasNext()) {
+                String current = appKeysIterator.next();
+                switch (current) {
+                    case "WeatherCondition":
+                    case "WeatherForecastCondition":
+                    case "WeatherForecastHighTemp":
+                    case "WeatherForecastLowTemp":
+                    case "WeatherTemperature":
+                    case "SettingUseMetric":
+                    case "WeatherUseNightIcon":
+                        messageKeys.put(current, appKeys.getInt(current));
+                        break;
+                }
+            }
+        } catch (JSONException e) {
+            GB.toast("There was an error accessing the TimeStyle watchface configuration.", Toast.LENGTH_LONG, GB.ERROR, e);
+        } catch (IOException ignore) {
+        }
+    }
+
+    /*
+     * converted to JAVA from original JS
+     */
+    private int getIconForConditionCode(int conditionCode, boolean isNight) {
+        int generalCondition = conditionCode / 100;
+        int iconToLoad;
+        // determine the correct icon
+        switch (generalCondition) {
+            case 2: //thunderstorm
+                iconToLoad = ICON_THUNDERSTORM;
+                break;
+            case 3: //drizzle
+                iconToLoad = ICON_LIGHT_RAIN;
+                break;
+            case 5: //rain
+                if (conditionCode == 500) {
+                    iconToLoad = ICON_LIGHT_RAIN;
+                } else if (conditionCode < 505) {
+                    iconToLoad = ICON_HEAVY_RAIN;
+                } else if (conditionCode == 511) {
+                    iconToLoad = ICON_RAINING_AND_SNOWING;
+                } else {
+                    iconToLoad = ICON_LIGHT_RAIN;
+                }
+                break;
+            case 6: //snow
+                if (conditionCode == 600 || conditionCode == 620) {
+                    iconToLoad = ICON_LIGHT_SNOW;
+                } else if (conditionCode > 610 && conditionCode < 620) {
+                    iconToLoad = ICON_RAINING_AND_SNOWING;
+                } else {
+                    iconToLoad = ICON_HEAVY_SNOW;
+                }
+                break;
+            case 7: // fog, dust, etc
+                iconToLoad = ICON_CLOUDY_DAY;
+                break;
+            case 8: // clouds
+                if (conditionCode == 800) {
+                    iconToLoad = (!isNight) ? ICON_CLEAR_DAY : ICON_CLEAR_NIGHT;
+                } else if (conditionCode < 803) {
+                    iconToLoad = (!isNight) ? ICON_PARTLY_CLOUDY : ICON_PARTLY_CLOUDY_NIGHT;
+                } else {
+                    iconToLoad = ICON_CLOUDY_DAY;
+                }
+                break;
+            default:
+                iconToLoad = ICON_WEATHER_GENERIC;
+                break;
+        }
+
+        return iconToLoad;
+    }
+
+    private byte[] encodeTimeStylePebbleWeather(WeatherSpec weatherSpec) {
+
+        if (weatherSpec == null) {
+            return null;
+        }
+
+        ArrayList<Pair<Integer, Object>> pairs = new ArrayList<>();
+
+        boolean isNight = weatherSpec.isCurrentTimeNight();
+
+        pairs.add(new Pair<>(messageKeys.get("SettingUseMetric"), 1)); //celsius
+        pairs.add(new Pair<>(messageKeys.get("WeatherUseNightIcon"), isNight ? 1 : 0));
+        pairs.add(new Pair<>(messageKeys.get("WeatherTemperature"), weatherSpec.getCurrentTemp() - 273));
+        pairs.add(new Pair<>(messageKeys.get("WeatherCondition"), getIconForConditionCode(weatherSpec.getCurrentConditionCode(), isNight)));
+
+        if (!weatherSpec.getForecasts().isEmpty()) {
+            WeatherSpec.Daily tomorrow = weatherSpec.getForecasts().get(0);
+            pairs.add(new Pair<>(messageKeys.get("WeatherForecastCondition"), getIconForConditionCode(tomorrow.getConditionCode(), isNight)));
+        }
+
+        pairs.add(new Pair<>(messageKeys.get("WeatherForecastHighTemp"), weatherSpec.getTodayMaxTemp() - 273));
+        pairs.add(new Pair<>(messageKeys.get("WeatherForecastLowTemp"), weatherSpec.getTodayMinTemp() - 273));
+
+        return mPebbleProtocol.encodeApplicationMessagePush(PebbleProtocol.ENDPOINT_APPLICATIONMESSAGE, mUUID, pairs, null);
+    }
+
+    @Override
+    public GBDeviceEvent[] onAppStart() {
+        WeatherSpec weatherSpec = Weather.getWeatherSpec();
+        if (weatherSpec == null) {
+            return new GBDeviceEvent[]{null};
+        }
+        GBDeviceEventSendBytes sendBytes = new GBDeviceEventSendBytes();
+        sendBytes.encodedBytes = encodeTimeStylePebbleWeather(weatherSpec);
+        return new GBDeviceEvent[]{sendBytes};
+    }
+
+    @Override
+    public byte[] encodeUpdateWeather(WeatherSpec weatherSpec) {
+        return encodeTimeStylePebbleWeather(weatherSpec);
+    }
+}

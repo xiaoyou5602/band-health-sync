@@ -1,0 +1,81 @@
+/*  Copyright (C) 2024 Damien Gaignon, Martin.JM
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.service.devices.huawei.requests;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.List;
+
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.devices.huawei.HuaweiConstants;
+import nodomain.freeyourgadget.gadgetbridge.devices.huawei.HuaweiPacket;
+import nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.FitnessData;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.huawei.HuaweiSupportProvider;
+
+public class SetTruSleepRequest extends Request {
+    private static final Logger LOG = LoggerFactory.getLogger(SetTruSleepRequest.class);
+
+    private final boolean userRequested;
+
+    /** Connection-time variant: never pushes an "off" state the user did not ask for. */
+    public SetTruSleepRequest(HuaweiSupportProvider support) {
+        this(support, false);
+    }
+
+    public SetTruSleepRequest(HuaweiSupportProvider support, boolean userRequested) {
+        super(support);
+        this.serviceId = FitnessData.id;
+        this.commandId = FitnessData.TruSleep.id;
+        this.userRequested = userRequested;
+    }
+
+    private boolean truSleepEnabled() {
+        return GBApplication
+                .getDeviceSpecificSharedPrefs(this.getDevice().getAddress())
+                .getBoolean(HuaweiConstants.PREF_HUAWEI_TRUSLEEP, false);
+    }
+
+    @Override
+    protected boolean requestSupported() {
+        if (!supportProvider.getDeviceState().supportsTruSleep())
+            return false;
+        // The preference defaults to off, so the init queue would disable the watch's own
+        // sleep tracking on every connect - silently, and without the user ever asking for it.
+        // Only the explicit settings toggle may turn TruSleep off; connecting must not.
+        if (!userRequested && !truSleepEnabled()) {
+            LOG.info("TruSleep is off in Gadgetbridge, leaving the watch setting untouched");
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    protected List<byte[]> createRequest() throws RequestCreationException {
+        boolean truSleepSwitch = truSleepEnabled();
+        try {
+            return new FitnessData.TruSleep.Request(paramsProvider, truSleepSwitch).serialize();
+        } catch (HuaweiPacket.CryptoException e) {
+            throw new RequestCreationException(e);
+        }
+    }
+
+    @Override
+    protected void processResponse() {
+        LOG.debug("handle Set TruSleep");
+    }
+}

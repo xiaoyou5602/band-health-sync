@@ -1,0 +1,123 @@
+/*  Copyright (C) 2025 Vitaliy Tomin, Thomas Kuehne
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.devices.igpsport;
+
+import android.app.Activity;
+import android.content.Context;
+import android.net.Uri;
+import android.os.Bundle;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.activities.appmanager.AppManagerActivity;
+import nodomain.freeyourgadget.gadgetbridge.devices.AbstractBLEDeviceCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.InstallHandler;
+import nodomain.freeyourgadget.gadgetbridge.devices.garmin.GarminWorkoutParser;
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivitySummaryParser;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivityTrackProvider;
+import nodomain.freeyourgadget.gadgetbridge.model.FitActivityTrackProvider;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceSupport;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.igpsport.IGPSportDeviceSupport;
+
+public abstract class IGPSportAbstractCoordinator extends AbstractBLEDeviceCoordinator {
+    @Override
+    public int getDefaultIconResource() {
+        return R.drawable.ic_device_default;
+    }
+
+    @Override
+    public String getManufacturer() {
+        return "iGPSPORT";
+    }
+
+    @NonNull
+    @Override
+    public Class<? extends DeviceSupport> getDeviceSupportClass(@NonNull final GBDevice device) {
+        return IGPSportDeviceSupport.class;
+    }
+
+    @Nullable
+    @Override
+    public ActivitySummaryParser getActivitySummaryParser(final GBDevice device, final Context context) {
+        return new GarminWorkoutParser(context);
+    }
+
+    @Override
+    @Nullable
+    public ActivityTrackProvider getActivityTrackProvider(@NonNull final GBDevice device, @NonNull final Context context) {
+        return new FitActivityTrackProvider();
+    }
+
+    @Override
+    public int getBondingStyle(){
+        return BONDING_STYLE_ASK;
+    }
+
+    @Override
+    public boolean supportsDataFetching(@NonNull final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsRecordedActivities(@NonNull final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsFlashing(@NonNull GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsAppsManagement(@NonNull final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public boolean supportsAppListFetching(@NonNull final GBDevice device) {
+        return true;
+    }
+
+    @Override
+    public Class<? extends Activity> getAppsManagementActivity(final GBDevice device) {
+        return AppManagerActivity.class;
+    }
+
+    @Override
+    public InstallHandler findInstallHandler(final Uri uri, final Bundle bundle, final Context context) {
+
+        final IGPSportRouteInstallHandler routeInstallHandler = new IGPSportRouteInstallHandler(uri, context);
+        if (routeInstallHandler.isValid()) {
+            return routeInstallHandler;
+        }
+
+        return null;
+    }
+
+    @Override
+    public DeviceKind getDeviceKind(@NonNull GBDevice device) {
+        return DeviceKind.BIKE_COMPUTER;
+    }
+
+    @Override
+    public boolean supportsWatchfaceManagement(@NonNull final GBDevice device) {
+        return false;
+    }
+}

@@ -1,0 +1,444 @@
+/*  Copyright (C) 2024 Damien Gaignon, Martin.JM
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets;
+
+import android.text.TextUtils;
+
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+
+import nodomain.freeyourgadget.gadgetbridge.devices.huawei.HuaweiPacket;
+import nodomain.freeyourgadget.gadgetbridge.devices.huawei.HuaweiTLV;
+
+public class Notifications {
+    public static final byte id = 0x02;
+    public static final byte[] defaultConstraints = new byte[]{
+            0x00, 0x02, 0x00, 0x0F,
+            0x00, 0x00, 0x00, 0x02, 0x00, 0x1E,
+            0x00, 0x00, 0x00, 0x02, 0x00, 0x1E,
+            0x00, 0x00, 0x00, 0x02, 0x00, 0x1E
+    };
+
+    public static class NotificationActionRequest extends HuaweiPacket {
+        public static final byte id = 0x01;
+
+        public static class TextElement {
+            public byte textType;
+            public byte encoding;
+            public String value;
+
+            public TextElement(byte textType, byte encoding, String value) {
+                this.textType = textType;
+                this.value = value;
+                this.encoding = encoding;
+            }
+        }
+
+        public static class AdditionalParams {
+
+            public boolean supportsReply = false;
+            public boolean supportsRepeatedNotify = false;
+            public boolean supportsRemoveSingle = false;
+            public boolean supportsReplyActions = false;
+            public boolean supportsTimestamp = false;
+
+            public String replyKey = "";
+            public String notificationKey = "";
+            public int notificationId = -1;
+            public String channelId = "";
+            public byte subscriptionId = 0;
+            public String address = "";
+            public String category = "";
+            public int voipType = 0;
+            public long when = 0;
+            public String pictureName = "";
+        }
+
+        // TODO: support other types of notifications
+        //        public static final int send = 0x01;
+        //        public static final int notificationId = 0x01;
+        //        public static final int notificationType = 0x02;
+        //        public static final int vibrate = 0x03;
+        //        public static final int payloadEmpty = 0x04;
+        //        public static final int imageHeight = 0x08;
+        //        public static final int imageWidth = 0x09;
+        //        public static final int imageColor = 0x0A;
+        //        public static final int imageData = 0x0B;
+        //        public static final int textType = 0x0E;
+        //        public static final int textEncoding = 0x0F;
+        //        public static final int textContent = 0x10;
+        //        public static final int sourceAppId = 0x11;
+        //        public static final int payloadText = 0x84;
+        //        public static final int payloadImage = 0x86;
+        //        public static final int textList = 0x8C;
+        //        public static final int textItem = 0x8D;
+
+        public NotificationActionRequest(
+                ParamsProvider paramsProvider,
+                short msgId,
+                byte notificationType,
+                ArrayList<TextElement> content,
+                String sourceAppId,
+                AdditionalParams addParams
+        ) {
+            super(paramsProvider);
+
+            this.serviceId = Notifications.id;
+            this.commandId = id;
+
+            // TODO: Add notification information per type if necessary
+
+            this.tlv = new HuaweiTLV()
+                    .put(0x01, msgId)
+                    .put(0x02, notificationType)
+                    .put(0x03, true); // This used to be vibrate, but doesn't work
+
+            HuaweiTLV subTlv = new HuaweiTLV();
+
+            for(TextElement el: content) {
+                HuaweiTLV elTlv = new HuaweiTLV()
+                        .put(0x0E, el.textType)
+                        .put(0x0F, el.encoding);
+                if(el.value != null && !el.value.isEmpty())
+                    elTlv.put(0x10, el.value); // TODO: truncate text by capability.
+                subTlv.put(0x8D, elTlv);
+            }
+
+            if (subTlv.length() != 0) {
+                this.tlv.put(0x84, new HuaweiTLV().put(0x8C, subTlv));
+            } else {
+                this.tlv.put(0x04);
+            }
+
+            if (sourceAppId != null)
+                this.tlv.put(0x11, sourceAppId.length() > 127?sourceAppId.substring(0, 127): sourceAppId);
+
+            if(addParams != null) {
+                if(!TextUtils.isEmpty(addParams.category)) { // type >= 34
+                    this.tlv.put(0x12, addParams.category); // "imcall" also possible value, not standard for android
+                }
+                if (addParams.supportsReply) {
+                    this.tlv.put(0x18, (addParams.replyKey != null) ? addParams.replyKey : "");
+                }
+                if (addParams.supportsReplyActions && notificationType == NotificationType.sms) {
+                    this.tlv.put(0x14, addParams.subscriptionId);
+                    this.tlv.put(0x17, addParams.address);
+                }
+                if (addParams.supportsTimestamp) {
+                    this.tlv.put(0x15, (int) (System.currentTimeMillis() / 1000));
+                }
+                if (addParams.supportsRepeatedNotify || addParams.supportsRemoveSingle) {
+                    this.tlv.put(0x19, (addParams.notificationKey != null) ? addParams.notificationKey : "");
+                    this.tlv.put(0x1a, addParams.notificationId);
+                    this.tlv.put(0x1b, (addParams.channelId != null) ? addParams.channelId : "");
+                }
+                if(addParams.voipType != 0) {
+                    this.tlv.put(0x29, (byte)addParams.voipType);
+                }
+
+                if(addParams.when != 0) {
+                    this.tlv.put(0x32, addParams.when);
+                }
+
+                if(!TextUtils.isEmpty(addParams.pictureName)) {
+                    this.tlv.put(0x34, addParams.pictureName);
+                }
+            }
+
+            this.complete = true;
+        }
+    }
+
+    public static class NotificationConstraints {
+        public static final byte id = 0x02;
+
+        public static class Request extends HuaweiPacket {
+            public Request(ParamsProvider paramsProvider) {
+                super(paramsProvider);
+                this.serviceId = Notifications.id;
+                this.commandId = id;
+                this.tlv = new HuaweiTLV()
+                        .put(0x01);
+                this.complete = true;
+            }
+        }
+
+        public static class Response extends HuaweiPacket {
+            public ByteBuffer constraints;
+
+            public Response(ParamsProvider paramsProvider) {
+                super(paramsProvider);
+                this.serviceId = Notifications.id;
+                this.commandId = id;
+                this.complete = true;
+            }
+
+            private void putByteBuffer(ByteBuffer bBuffer, byte position, byte[] value) {
+                ByteBuffer bValue = ByteBuffer.wrap(value);
+                if (bValue.capacity() == 4) {
+                    short highbytes = bValue.getShort();
+                    if (highbytes != 0) {
+                        throw new RuntimeException("This should not happen until very large messages allowed");
+                    }
+                    bBuffer.putShort(position, bValue.getShort());
+                } else if (bValue.capacity() == 2) {
+                    bBuffer.putShort(position, bValue.getShort());
+                } else {
+                    bBuffer.put(position, (byte) 0x00);
+                    bBuffer.put(position + 1, bValue.get());
+                }
+            }
+
+            @Override
+            public void parseTlv() throws ParseException {
+                this.constraints = ByteBuffer.allocate(22);
+                HuaweiTLV container = this.tlv
+                        .getObject(0x81)
+                        .getObject(0x82)
+                        .getObject(0x90);
+                for (HuaweiTLV subContainer : container.getObjects(0x91)) {
+                    if (subContainer.getByte(0x12) == 0x01) {
+                        putByteBuffer(constraints, NotificationConstraintsType.contentFormat, new byte[]{0x02}); //Always 0x02 even if gadget report 0x03
+                        putByteBuffer(constraints, NotificationConstraintsType.contentLength, subContainer.getBytes(0x14));
+                    }
+                    if (subContainer.getByte(0x12) == 0x05) {
+                        constraints.putShort(NotificationConstraintsType.yellowPagesSupport, (short) 0x01);
+                        putByteBuffer(constraints, NotificationConstraintsType.yellowPagesFormat, subContainer.getBytes(0x13));
+                        putByteBuffer(constraints, NotificationConstraintsType.yellowPagesLength, subContainer.getBytes(0x14));
+                    }
+                    if (subContainer.getByte(0x12) == 0x06) {
+                        constraints.putShort(NotificationConstraintsType.contentSignSupport, (short) 0x01);
+                        putByteBuffer(constraints, NotificationConstraintsType.contentSignFormat, subContainer.getBytes(0x13));
+                        putByteBuffer(constraints, NotificationConstraintsType.contentSignLength, subContainer.getBytes(0x14));
+                    }
+                    if (subContainer.getByte(0x12) == 0x07) {
+                        constraints.putShort(NotificationConstraintsType.incomingNumberSupport, (short) 0x01);
+                        putByteBuffer(constraints, NotificationConstraintsType.incomingNumberFormat, subContainer.getBytes(0x13));
+                        putByteBuffer(constraints, NotificationConstraintsType.incomingNumberLength, subContainer.getBytes(0x14));
+                    }
+                }
+                constraints.rewind();
+            }
+        }
+    }
+
+    public static class NotificationConstraintsType {
+        // TODO: enum?
+        public static final byte contentFormat = 0x00;
+        public static final byte contentLength = 0x02;
+        public static final byte yellowPagesSupport = 0x04;
+        public static final byte yellowPagesFormat = 0x06;
+        public static final byte yellowPagesLength = 0x08;
+        public static final byte contentSignSupport = 0x0A;
+        public static final byte contentSignFormat = 0x0C;
+        public static final byte contentSignLength = 0x0E;
+        public static final byte incomingNumberSupport = 0x10;
+        public static final byte incomingNumberFormat = 0x12;
+        public static final byte incomingNumberLength = 0x14;
+    }
+
+    public static class NotificationType {
+        // TODO: enum?
+        public static final byte call = 0x01;
+        public static final byte sms = 0x02;
+        public static final byte weChat = 0x03;
+        public static final byte qq = 0x0B;
+        public static final byte stopNotification = 0x0C; // To stop showing a (call) notification
+        public static final byte startCall = 0x0D;
+        public static final byte missedCall = 0x0E;
+        public static final byte email = 0x0F;
+        public static final byte outgoingCall = 0x32;
+        public static final byte generic = 0x7F;
+    }
+
+    public static class TextType {
+        // TODO: enum?
+        public static final int text = 0x01;
+        public static final int sender = 0x02;
+        public static final int title = 0x03;
+        public static final int yellowPage = 0x05;
+        public static final int contentSign = 0x06;
+        public static final int flight = 0x07;
+        public static final int train = 0x08;
+        public static final int warmRemind = 0x09;
+        public static final int weather = 0x0A;
+    }
+
+    public static class NotificationStateRequest extends HuaweiPacket {
+        public static final byte id = 0x04;
+
+        public NotificationStateRequest(
+                ParamsProvider paramsProvider,
+                boolean status
+        ) {
+            super(paramsProvider);
+
+            this.serviceId = Notifications.id;
+            this.commandId = id;
+
+            this.tlv = new HuaweiTLV()
+                    .put(0x81, new HuaweiTLV()
+                            .put(0x02, status)
+                            .put(0x03, status)
+                    );
+
+            this.complete = true;
+        }
+    }
+
+    public static class NotificationCapabilities {
+        public static final byte id = 0x05;
+
+        public static class Request extends HuaweiPacket {
+            public Request(
+                    ParamsProvider paramsProvider
+            ) {
+                super(paramsProvider);
+                this.serviceId = Notifications.id;
+                this.commandId = id;
+                this.tlv = new HuaweiTLV()
+                        .put(0x01);
+
+                this.complete = true;
+            }
+        }
+
+        public static class Response extends HuaweiPacket {
+            public byte capabilities = 0x00;
+
+            public Response(ParamsProvider paramsProvider) {
+                super(paramsProvider);
+                this.serviceId = DeviceConfig.id;
+                this.commandId = id;
+            }
+
+            @Override
+            public void parseTlv() throws ParseException {
+                if (this.tlv.contains(0x01))
+                    this.capabilities = this.tlv.getByte(0x01);
+            }
+        }
+    }
+
+    public static class NotificationRemoveAction extends HuaweiPacket {
+        public static final byte id = 0x06;
+
+        public NotificationRemoveAction(
+                ParamsProvider paramsProvider,
+                byte msgType,
+                String sourceAppId,
+                String notificationKey,
+                int notificationId,
+                String notificationChannelId,
+                String notificationCategory
+        ) {
+            super(paramsProvider);
+
+            this.serviceId = Notifications.id;
+            this.commandId = id;
+
+            this.tlv = new HuaweiTLV()
+                    .put(0x01, msgType)
+                    .put(0x02, sourceAppId)
+                    .put(0x03, notificationKey)
+                    .put(0x04, notificationId)
+                    .put(0x05, notificationChannelId);
+            if (!TextUtils.isEmpty(notificationCategory))
+                this.tlv.put(0x06, notificationCategory);
+
+            this.complete = true;
+        }
+    }
+
+    public static class WearMessagePushRequest extends HuaweiPacket {
+        public static final byte id = 0x08;
+
+        public WearMessagePushRequest(
+                ParamsProvider paramsProvider,
+                boolean status
+        ) {
+            super(paramsProvider);
+
+            this.serviceId = Notifications.id;
+            this.commandId = id;
+
+            /* Value sent is the opposite of the switch status */
+            this.tlv = new HuaweiTLV()
+                    .put(0x01, !status);
+
+            this.complete = true;
+        }
+    }
+
+    public static class NotificationReply {
+        public static final byte id = 0x10;
+        public static class ReplyResponse extends HuaweiPacket {
+            public int type = 0;
+            public int encoding = 0; // 3 - "utf-16"
+            public int subId = 0;
+            public String key;
+            public String addData;
+            public String text;
+
+            public ReplyResponse(ParamsProvider paramsProvider) {
+                super(paramsProvider);
+                this.serviceId = Notifications.id;
+                this.commandId = id;
+            }
+
+            @Override
+            public void parseTlv() throws ParseException {
+                if (this.tlv.contains(0x01))
+                    this.type = this.tlv.getAsInteger(0x01);
+                if (this.tlv.contains(0x02))
+                    this.encoding = this.tlv.getAsInteger(0x02);
+                if (this.tlv.contains(0x03))
+                    this.subId = this.tlv.getAsInteger(0x03);
+                if (this.tlv.contains(0x04))
+                    this.key = this.tlv.getString(0x04);
+                if (this.tlv.contains(0x05))
+                    this.addData = this.tlv.getString(0x05);
+                if (this.tlv.contains(0x06)) {
+                    if(this.encoding == 3) {
+                        this.text = new String(this.tlv.getBytes(0x06), StandardCharsets.UTF_16);
+                    } else {
+                        this.text = this.tlv.getString(0x06);
+                    }
+                }
+            }
+        }
+
+        public static class ReplyAck extends HuaweiPacket {
+
+            public ReplyAck(
+                    ParamsProvider paramsProvider,
+                    byte code
+            ) {
+                super(paramsProvider);
+
+                this.serviceId = Notifications.id;
+                this.commandId = id;
+
+                this.tlv = new HuaweiTLV()
+                        .put(0x07, code);
+
+                this.complete = true;
+            }
+        }
+    }
+}

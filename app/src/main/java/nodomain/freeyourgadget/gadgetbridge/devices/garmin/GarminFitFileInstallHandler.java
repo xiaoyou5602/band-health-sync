@@ -1,0 +1,264 @@
+/*  Copyright (C) 2024-2026 José Rebelo, Thomas Kuehne
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.devices.garmin;
+
+import static nodomain.freeyourgadget.gadgetbridge.service.AbstractDeviceSupport.BUNDLE_EXTRA_INSTALL_BYTES;
+
+import android.app.Activity;
+import android.content.Context;
+import android.net.Uri;
+import android.os.Bundle;
+
+import androidx.annotation.NonNull;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.activities.install.FwAppInstallerActivity;
+import nodomain.freeyourgadget.gadgetbridge.activities.install.InstallActivity;
+import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.InstallHandler;
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.model.GenericItem;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.BLETypeConversions;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.FileType;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.FitFile;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.exception.FitParseException;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitCourse;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitLocation;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitSegmentId;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.garmin.fit.messages.FitWorkout;
+import nodomain.freeyourgadget.gadgetbridge.util.FileUtils;
+import nodomain.freeyourgadget.gadgetbridge.util.UriHelper;
+
+public class GarminFitFileInstallHandler implements InstallHandler {
+    private static final Logger LOG = LoggerFactory.getLogger(GarminFitFileInstallHandler.class);
+
+    protected final Context mContext;
+    private byte[] rawBytes;
+    private String filename;
+    private FitFile fitFile;
+    private FileType.FILETYPE fileType;
+    private FitParseException fitParseException;
+
+    public GarminFitFileInstallHandler(final Uri uri, final Bundle options, final Context context) {
+        this.mContext = context;
+
+        if (options != null && options.containsKey(BUNDLE_EXTRA_INSTALL_BYTES)) {
+            try {
+                rawBytes = options.getByteArray(BUNDLE_EXTRA_INSTALL_BYTES);
+                fitFile = FitFile.parseIncoming(rawBytes);
+                fileType = fitFile.getFileType();
+                return;
+            } catch (final FitParseException e) {
+                LOG.error("bundle fit bytes are corrupted", e);
+                fitParseException = e;
+            } catch (final Exception e) {
+                LOG.error("failed to read bundle fit bytes", e);
+            }
+        }
+
+        final UriHelper uriHelper;
+        try {
+            uriHelper = UriHelper.get(uri, context);
+            filename = uriHelper.getFileName();
+        } catch (final IOException e) {
+            LOG.error("Failed to get uri", e);
+            return;
+        }
+
+        // Quickly check whether it's a valid fit file without reading the entire thing
+        try (InputStream in = new BufferedInputStream(uriHelper.openInputStream())) {
+            final byte[] header = new byte[12];
+            final int read = in.read(header);
+            if (read != header.length) {
+                throw new IOException("Not enough bytes for fit header");
+            }
+            if (BLETypeConversions.toUint32(header, 8) != FitFile.Header.MAGIC) {
+                // not fit file
+                return;
+            }
+        } catch (final Exception e) {
+            LOG.error("Failed to validate fit file", e);
+            return;
+        }
+
+        try (InputStream in = new BufferedInputStream(uriHelper.openInputStream())) {
+            rawBytes = FileUtils.readAll(in, 10 * 1024 * 1024); // 10MB
+            fitFile = FitFile.parseIncoming(rawBytes);
+            fileType = fitFile.getFileType();
+        } catch (final FitParseException e) {
+            LOG.error("Fit file is corrupted", e);
+            fitParseException = e;
+        } catch (final Exception e) {
+            LOG.error("Failed to read fit file", e);
+        }
+    }
+
+    @NonNull
+    @Override
+    public Class<? extends Activity> getInstallActivity() {
+        return FwAppInstallerActivity.class;
+    }
+
+    @Override
+    public boolean isValid() {
+        // If we got a fitParseException, the file is "valid" (a fit file) for this handler, but corrupted
+        return fitParseException != null || (fitFile != null && fileType != null);
+    }
+
+    @Override
+    public void validateInstallation(@NonNull final InstallActivity installActivity, @NonNull final GBDevice device) {
+        if (fitParseException != null) {
+            installActivity.setInfoText(fitParseException.getLocalizedMessage());
+            installActivity.setInstallEnabled(false);
+            return;
+        }
+
+        if (fitFile == null || fileType == null) {
+            return;
+        }
+
+        if (device.isBusy()) {
+            installActivity.setInfoText(device.getBusyTask());
+            installActivity.setInstallEnabled(false);
+            return;
+        }
+
+        final DeviceCoordinator coordinator = device.getDeviceCoordinator();
+        if (!(coordinator instanceof GarminCoordinator garminCoordinator)) {
+            LOG.warn("Coordinator is not a GarminCoordinator: {}", coordinator.getClass());
+            installActivity.setInfoText(mContext.getString(R.string.fwapp_install_device_not_supported));
+            installActivity.setInstallEnabled(false);
+            return;
+        }
+        final boolean fileSupported = parseFitFile(installActivity, garminCoordinator, device);
+
+        if (!fileSupported) {
+            installActivity.setInfoText(mContext.getString(R.string.fwapp_install_device_not_supported));
+            installActivity.setInstallEnabled(false);
+            return;
+        }
+
+        if (!device.isInitialized()) {
+            installActivity.setInfoText(mContext.getString(R.string.fwapp_install_device_not_ready));
+            installActivity.setInstallEnabled(false);
+            return;
+        }
+
+        installActivity.setInstallEnabled(true);
+    }
+
+    @Override
+    public void onStartInstall(@NonNull final GBDevice device) {
+    }
+
+    public byte[] getRawBytes() {
+        return rawBytes;
+    }
+
+    public FileType.FILETYPE getFileType() {
+        return fileType;
+    }
+
+    private boolean parseFitFile(final InstallActivity installActivity, final GarminCoordinator coordinator, final GBDevice device) {
+        final boolean installUnsupportedFiles = GBApplication.getDevicePrefs(device).installUnsupportedFiles();
+
+        final String name;
+        final String kindName;
+        final boolean supported;
+
+        switch (fileType) {
+            case COURSES:
+                kindName = mContext.getString(R.string.kind_gpx_route);
+                supported = coordinator.supports(device, GarminCapability.COURSE_DOWNLOAD);
+                name = fitFile.getRecords().stream()
+                        .filter(r -> r instanceof FitCourse)
+                        .map(r -> (FitCourse) r)
+                        .findFirst()
+                        .map(FitCourse::getName)
+                        .orElse(filename);
+                break;
+            case WORKOUTS:
+                kindName = mContext.getString(R.string.menuitem_workout);
+                supported = coordinator.supports(device, GarminCapability.WORKOUT_DOWNLOAD);
+                name = fitFile.getRecords().stream()
+                        .filter(r -> r instanceof FitWorkout)
+                        .map(r -> (FitWorkout) r)
+                        .findFirst()
+                        .map(FitWorkout::getName)
+                        .orElse(filename);
+                break;
+            case LOCATION:
+                kindName = mContext.getString(R.string.kind_waypoints);
+                supported = coordinator.supports(device, GarminCapability.EXPLORE_SYNC)
+                        || coordinator.supports(device, GarminCapability.WAYPOINT_TRANSFER);
+                long count = fitFile.getRecords().stream()
+                        .filter(r -> r instanceof FitLocation)
+                        .count();
+                name = mContext.getString(R.string.waypoint_count, count);
+                break;
+            case SEGMENTS:
+                kindName = mContext.getString(R.string.kind_segments);
+                supported = coordinator.supports(device, GarminCapability.SEGMENTS);
+                name = fitFile.getRecords().stream()
+                        .filter(r -> r instanceof FitSegmentId)
+                        .map(r -> (FitSegmentId) r)
+                        .findFirst()
+                        .map(FitSegmentId::getName)
+                        .orElse(filename);
+                break;
+            default:
+                LOG.warn("Unsupported fit file type: {}", fileType);
+                kindName = mContext.getString(R.string.menuitem_unknown_app, fileType.name());
+                supported = false;
+                name = filename;
+        }
+
+        if (!supported) {
+            LOG.warn("Device does not support install of {}", fileType);
+            if (!installUnsupportedFiles) {
+                return false;
+            }
+        }
+
+        final GenericItem fwItem = new GenericItem(mContext.getString(
+                R.string.installhandler_firmware_name,
+                mContext.getString(coordinator.getDeviceNameResource()),
+                kindName,
+                name
+        ));
+        fwItem.setIcon(coordinator.getDefaultIconResource());
+
+        final StringBuilder builder = new StringBuilder();
+        builder.append(mContext.getString(R.string.fw_upgrade_notice, kindName));
+        if (!supported) {
+            builder.append("\n\n");
+            builder.append(mContext.getString(R.string.install_unsupported_files_warning));
+        }
+        installActivity.setInfoText(builder.toString());
+        installActivity.setInstallItem(fwItem);
+
+        return true;
+    }
+}

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="textColorPrimary" format="color" />
+    <attr name="textColorSecondary" format="color" />
+    <attr name="textColorTertiary" format="color" />
+
+    <attr name="drawer_header_color" format="color" />
+    <attr name="drawer_title_color" format="color" />
+    <attr name="cardview_background_color" format="color" />
+    <attr name="actionmenu_icon_color" format="color" />
+
+    <attr name="chart_deep_sleep" format="color" />
+    <attr name="chart_light_sleep" format="color" />
+    <attr name="chart_rem_sleep" format="color" />
+    <attr name="chart_awake_sleep" format="color" />
+    <attr name="chart_activity" format="color" />
+    <attr name="chart_not_worn" format="color" />
+    <attr name="spo2_avg_color" format="color" />
+    <attr name="training_acute_load" format="color" />
+    <attr name="alternate_row_background" format="color" />
+
+    <attr name="checkmarkColor" format="color" />
+    <attr name="deviceIconPrimary" format="color" />
+    <attr name="deviceIconOnPrimary" format="color" />
+    <attr name="deviceIconLight" format="color" />
+    <attr name="deviceIconDark" format="color" />
+</resources>

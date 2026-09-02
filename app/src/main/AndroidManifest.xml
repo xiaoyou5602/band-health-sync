@@ -1,0 +1,1335 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+
+    <!--
+        Comment in for testing Pebble Emulator
+        <uses-permission android:name="android.permission.INTERNET" />
+    -->
+    <!-- Used for Bluetooth access -->
+    <!--
+        Request legacy Bluetooth permissions on older devices.
+        #5053 - keep the permission even on Android 12 and above
+    -->
+    <uses-permission android:name="android.permission.BLUETOOTH" tools:remove="android:maxSdkVersion"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30"/>
+    <!-- Needed to looks for Bluetooth devices. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <!-- Needed to communicate with already-paired Bluetooth devices. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Since Android 10 -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+    <!-- Schedule exact alarms (eg. for DST changes) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!-- Take wake locks (e.g. for time sync) -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!--
+        Necessary for asking the user to disable battery optimizations.
+        GB falls under the acceptable use cases documented here:
+        https://developer.android.com/training/monitoring-device-state/doze-standby.html#exemption-cases
+    -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+
+    <!-- Read loyalty cards from Catima -->
+    <uses-permission android:name="me.hackerchick.catima.READ_CARDS"/>
+    <uses-permission android:name="me.hackerchick.catima.debug.READ_CARDS"/>
+
+    <!-- Read passes from FossWallet -->
+    <uses-permission android:name="nz.eloque.foss_wallet.READ_CARDS"/>
+    <uses-permission android:name="nz.eloque.foss_wallet.dev.READ_CARDS"/>
+
+    <!--
+        Upstream deliberately strips INTERNET here and routes the few network features through the
+        separate Internet Helper app. toge's fork keeps it: the self-hosted health sync posts to the
+        user's own server from this process, and going through a helper app would reintroduce
+        exactly the second-app dependency that sync exists to remove. INTERNET is an install-time
+        permission, so this adds no runtime prompt.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Internet Helper -->
+    <uses-permission android:name="nodomain.freeyourgadget.internethelper.INTERNET"/>
+
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission
+        android:name="android.permission.MEDIA_CONTENT_CONTROL"
+        tools:ignore="ProtectedPermissions" />
+
+    <!--
+        Allow Gadgetbridge to run Termux commands. Permission must be granted manually through the
+        permissions page in Android settings.
+        More information: https://github.com/termux/termux-app/wiki/RUN_COMMAND-Intent
+    -->
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND"/>
+
+    <!-- Used for background service -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.REQUEST_COMPANION_RUN_IN_BACKGROUND" />
+    <uses-permission android:name="android.permission.REQUEST_OBSERVE_COMPANION_DEVICE_PRESENCE" />
+
+    <!-- Used for reverse find device -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Used for weather provider access -->
+    <uses-permission android:name="cyanogenmod.permission.ACCESS_WEATHER_MANAGER" />
+    <uses-permission android:name="cyanogenmod.permission.READ_WEATHER" />
+    <uses-permission android:name="lineageos.permission.ACCESS_WEATHER_MANAGER" />
+    <uses-permission android:name="lineageos.permission.READ_WEATHER" />
+    <uses-permission android:name="org.omnirom.omnijaws.READ_WEATHER" />
+
+    <!-- Used for starting activities from the background with intents -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <uses-permission android:name="android.permission.CAMERA"/>
+
+    <!--
+    SDK 30 & Android 11 - Used for getting app name from notifications, and for starting
+    services from other packages via intents, when targeting Android API level 30 or later
+    on devices running Android 11 or later.
+    https://developer.android.com/training/package-visibility
+    https://support.google.com/googleplay/android-developer/answer/10158779?hl=en#zippy=%2Cpermitted-uses-of-the-query-all-packages-permission%2Cexceptions
+    -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
+    <!-- Needed to show notification with targetSdkVersion 33 with Android 13 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- Needed for Health Connect See this for more: https://developer.android.com/health-and-fitness/guides/health-connect/plan/data-types#alpha10 -->
+    <uses-permission android:name="android.permission.health.WRITE_ACTIVE_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE"/>
+    <uses-permission android:name="android.permission.health.WRITE_STEPS"/>
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE"/>
+    <uses-permission android:name="android.permission.health.WRITE_SLEEP"/>
+    <uses-permission android:name="android.permission.health.WRITE_TOTAL_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.WRITE_DISTANCE"/>
+    <uses-permission android:name="android.permission.health.WRITE_VO2_MAX"/>
+    <uses-permission android:name="android.permission.health.WRITE_HEART_RATE_VARIABILITY"/>
+    <uses-permission android:name="android.permission.health.WRITE_WEIGHT"/>
+    <uses-permission android:name="android.permission.health.WRITE_OXYGEN_SATURATION"/>
+    <uses-permission android:name="android.permission.health.WRITE_BODY_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.WRITE_SKIN_TEMPERATURE" />
+    <uses-permission android:name="android.permission.health.WRITE_ELEVATION_GAINED" />
+    <uses-permission android:name="android.permission.health.WRITE_SPEED" />
+    <uses-permission android:name="android.permission.health.WRITE_POWER" />
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE_ROUTE" />
+    <uses-permission android:name="android.permission.health.WRITE_RESPIRATORY_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_RESTING_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.WRITE_BLOOD_GLUCOSE" />
+    <uses-permission android:name="android.permission.health.WRITE_STEPS_CADENCE" />
+    <uses-permission android:name="android.permission.health.WRITE_CYCLING_PEDALING_CADENCE" />
+    <uses-sdk tools:overrideLibrary="androidx.health.connect.client"/>
+
+    <uses-feature
+        android:name="android.hardware.bluetooth"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
+    <uses-feature
+        android:name="android.software.companion_device_setup"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
+    <application
+        android:name=".GBApplication"
+        android:allowBackup="false"
+        android:supportsRtl="true"
+        android:fullBackupContent="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:requestLegacyExternalStorage="true"
+        android:theme="@style/GadgetbridgeTheme"
+        tools:replace="android:label">
+        <receiver
+            android:name=".externalevents.sleepasandroid.SleepAsAndroidReceiver"
+            android:enabled="true"
+            android:exported="true" >
+            <intent-filter>
+                <action android:name="com.urbandroid.sleep.watch.START_TRACKING" />
+                <action android:name="com.urbandroid.sleep.watch.STOP_TRACKING" />
+                <action android:name="com.urbandroid.sleep.watch.SET_PAUSE" />
+                <action android:name="com.urbandroid.sleep.watch.SET_SUSPENDED" />
+                <action android:name="com.urbandroid.sleep.watch.SET_BATCH_SIZE" />
+                <action android:name="com.urbandroid.sleep.watch.START_ALARM" />
+                <action android:name="com.urbandroid.sleep.watch.STOP_ALARM" />
+                <action android:name="com.urbandroid.sleep.watch.UPDATE_ALARM" />
+                <action android:name="com.urbandroid.sleep.watch.SHOW_NOTIFICATION" />
+                <action android:name="com.urbandroid.sleep.watch.HINT" />
+                <action android:name="com.urbandroid.sleep.watch.CHECK_CONNECTED" />
+            </intent-filter>
+        </receiver>
+        <activity
+            android:name=".activities.ControlCenterv2"
+            android:label="@string/title_activity_controlcenter"
+            android:theme="@style/SplashTheme"
+            android:launchMode="singleTop"
+            android:exported="true">
+            <intent-filter>
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".activities.welcome.WelcomeActivity"
+            android:label="@string/first_start_welcome_title"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.PermissionsActivity"
+            android:label="@string/first_start_permissions_title"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.SettingsActivity"
+            android:label="@string/title_activity_settings"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.DashboardPreferencesActivity"
+            android:label="@string/dashboard_settings"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".activities.maps.MapsSettingsActivity"
+            android:label="@string/maps_settings"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".activities.automations.AutomationsSettingsActivity"
+            android:label="@string/pref_header_automations"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".activities.automations.AutoExportDbSettingsActivity"
+            android:label="@string/pref_header_auto_export_db"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".activities.automations.AutoExportZipSettingsActivity"
+            android:label="@string/pref_header_auto_export_zip"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".activities.automations.AutoExportGpxSettingsActivity"
+            android:label="@string/pref_header_auto_export_gpx"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".activities.automations.AutoExportFitSettingsActivity"
+            android:label="@string/pref_header_auto_export_fit"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".activities.maps.MapsTrackActivity"
+            android:label="@string/maps"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".activities.workouts.charts.WorkoutChartsActivity"
+            android:label="@string/workout_charts"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|layoutDirection|uiMode"
+            android:parentActivityName=".activities.workouts.WorkoutDetailsActivity" />
+        <activity
+            android:name=".activities.SleepAsAndroidPreferencesActivity"
+            android:label="@string/sleepasandroid_settings"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".activities.InternetHelperPreferencesActivity"
+            android:label="@string/prefs_internet_helper_title"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".activities.internet.InternetFirewallActivity"
+            android:label="@string/internet_firewall_title"
+            android:parentActivityName=".activities.InternetHelperPreferencesActivity" />
+        <activity
+            android:name=".activities.preferences.HealthConnectPreferencesActivity"
+            android:label="@string/healthconnect_settings"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".activities.preferences.SelfHostedHealthPreferencesActivity"
+            android:label="@string/selfhosted_health_settings"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".activities.endurain.OnlineFitnessTrackersPreferencesActivity"
+            android:label="@string/prefs_online_fitness_trackers_title"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".activities.AboutUserPreferencesActivity"
+            android:label="@string/activity_prefs_about_you"
+            android:parentActivityName=".activities.AboutUserPreferencesActivity" />
+        <activity
+            android:name=".activities.charts.ChartsPreferencesActivity"
+            android:label="@string/activity_prefs_charts"
+            android:parentActivityName=".activities.charts.ChartsPreferencesActivity" />
+        <activity
+            android:name=".activities.files.FileManagerActivity"
+            android:label="@string/activity_data_management_directory_content_title"
+            android:parentActivityName=".activities.DataManagementActivity" />
+        <activity
+            android:name=".activities.fit.FitViewerActivity"
+            android:exported="true"
+            android:label="@string/fit_file_viewer" />
+        <activity
+            android:name=".activities.BackupRestoreProgressActivity"
+            android:label="@string/activity_db_management_backup_restore_label"
+            android:parentActivityName=".activities.DataManagementActivity" />
+        <activity
+            android:name=".activities.discovery.DiscoveryPairingPreferenceActivity"
+            android:label="@string/activity_prefs_discovery_pairing"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".activities.loyaltycards.LoyaltyCardsSettingsActivity"
+            android:label="@string/loyalty_cards"
+            android:parentActivityName=".activities.devicesettings.DeviceSettingsActivity" />
+        <activity
+            android:name=".activities.audiorecordings.AudioRecordingsActivity"
+            android:label="@string/audio_recordings"
+            android:parentActivityName=".activities.devicesettings.DeviceSettingsActivity" />
+        <activity
+            android:name=".devices.garmin.GarminRealtimeSettingsActivity"
+            android:label="@string/loading"
+            android:parentActivityName=".activities.devicesettings.DeviceSettingsActivity" />
+        <activity
+            android:name=".devices.huawei.ui.HuaweiStressCalibrationActivity"
+            android:label="@string/huawei_stress_calibrate"
+            android:parentActivityName=".activities.devicesettings.DeviceSettingsActivity" />
+        <activity
+            android:name=".activities.heartratezones.HeartRateSettingsActivity"
+            android:label="@string/heart_rate_settings"
+            android:parentActivityName=".activities.devicesettings.DeviceSettingsActivity" />
+        <activity
+            android:name=".activities.NotificationsAppIconUploadActivity"
+            android:label="@string/notifications_app_icon_upload"
+            android:parentActivityName=".activities.devicesettings.DeviceSettingsActivity" />
+        <activity
+            android:name=".activities.workouts.WorkoutListActivity"
+            android:label="@string/activity_summaries"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.appmanager.AppManagerActivity"
+            android:label="@string/title_activity_appmanager"
+            android:launchMode="singleTop"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.appmanager.config.DynamicAppConfigActivity"
+            android:label="@string/app_configure"
+            android:launchMode="singleTop"
+            android:parentActivityName=".activities.appmanager.AppManagerActivity" />
+        <activity
+            android:name=".activities.appmanager.RebbleAppStoreActivity"
+            android:label="@string/activity_title_rebble_app_store"
+            android:parentActivityName=".activities.appmanager.AppManagerActivity" />
+        <activity
+            android:name=".activities.musicmanager.MusicManagerActivity"
+            android:label="@string/title_activity_musicmanager"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".activities.AppBlacklistActivity"
+            android:label="@string/title_activity_notification_management"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".activities.CalendarSelectionActivity"
+            android:label="@string/pref_title_calendar_sync_choose"
+            android:parentActivityName=".activities.SettingsActivity" />
+        <activity
+            android:name=".devices.vesc.VescControlActivity"
+            android:label="@string/devicetype_vesc"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".devices.idasen.IdasenControlActivity"
+            android:label="@string/devicetype_idasen"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".devices.ultrahuman.UltrahumanBreathingActivity"
+            android:label="@string/devicetype_ultrahuma_ring_air"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".devices.generic_scale.GenericWeightScaleMeasurementActivity"
+            android:label="@string/devicetype_generic_weight_scale"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".devices.thermalprinter.SendToPrinterActivity"
+            android:label="@string/devicetype_generic_thermal_printer"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.install.FwAppInstallerActivity"
+            android:label="@string/title_activity_fw_app_insaller"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.install.GpxRouteInstallerActivity"
+            android:label="@string/title_activity_gps_track_installer"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.install.FileInstallerActivity"
+            android:label="@string/title_activity_file_installer"
+            android:parentActivityName=".activities.ControlCenterv2"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="*/*" />
+                <!-- needed for aosp-derived ROMs? -->
+
+                <data android:host="*" />
+                <data android:scheme="file" />
+
+                <!-- as seen on openkeychain repo: https://github.com/open-keychain/open-keychain/blob/master/OpenKeychain/src/main/AndroidManifest.xml -->
+
+                <data android:pathPattern="/.*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\.res" />
+                <data android:pathPattern="/.*\\..*\\.res" />
+                <data android:pathPattern="/.*\\..*\\..*\\.res" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\.res" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.res" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.res" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.res" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.res" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.res" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.res" />
+                <data android:pathPattern="/.*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\..*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbl" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <!-- no mimeType filter, needed for CM-derived ROMs? -->
+
+                <data android:host="*" />
+                <data android:scheme="file" />
+
+                <!-- as seen on openkeychain repo: https://github.com/open-keychain/open-keychain/blob/master/OpenKeychain/src/main/AndroidManifest.xml -->
+
+                <data android:pathPattern="/.*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.fw" />
+                <data android:pathPattern="/.*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ft.en" />
+                <data android:pathPattern="/.*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.ft" />
+                <data android:pathPattern="/.*\\.res" />
+                <data android:pathPattern="/.*\\..*\\.res" />
+                <data android:pathPattern="/.*\\..*\\..*\\.res" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\.res" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.res" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.res" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.res" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.res" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.res" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.res" />
+                <data android:pathPattern="/.*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.gps" />
+                <data android:pathPattern="/.*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbw" />
+                <data android:pathPattern="/.*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbz" />
+                <data android:pathPattern="/.*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\..*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbl" />
+                <data android:pathPattern="/.*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\..*\\.pbl" />
+            </intent-filter>
+
+            <!-- to receive the firmwares from the download content provider -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+
+            <!-- to receive firmwares from the download content provider if recognized as zip -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
+            </intent-filter>
+
+            <!-- to receive files from the "share" intent -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:exported="false"
+            android:name=".activities.app_specific_notifications.AppSpecificNotificationSettingsActivity"
+            android:label="@string/prefs_wena3_notification_per_app_settings_title"
+            android:parentActivityName=".activities.devicesettings.DeviceSettingsActivity">
+            <intent-filter>
+                <action android:name=".SonyWena3PerAppNotificationSettingsActivity" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:exported="false"
+            android:name=".activities.app_specific_notifications.AppSpecificNotificationSettingsDetailActivity"
+            android:label="@string/prefs_wena3_notification_per_app_settings_title"
+            android:parentActivityName=".activities.app_specific_notifications.AppSpecificNotificationSettingsActivity"
+            />
+
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Used for syncing data with Health Connect" />
+        </service>
+        <service
+            android:name=".externalevents.NotificationListener"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Bind to notification listener for capturing and forwarding notifications" />
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".service.NotificationCollectorMonitorService"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Service for capturing and forwarding notifications" />
+        </service>
+        <service
+            android:name=".service.DeviceCommunicationService"
+            android:foregroundServiceType="connectedDevice" />
+        <service
+            android:name=".devices.pinetime.PineTimeDFUService"
+            android:label="PineTime Nordic DFU service"
+            android:foregroundServiceType="connectedDevice" />
+
+        <service
+            android:name=".service.btle.BLEScanService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice" />
+
+        <service
+            android:name=".service.GBCompanionDeviceService"
+            android:exported="true"
+            android:label="GB CompanionDevice Service"
+            android:permission="android.permission.BIND_COMPANION_DEVICE_SERVICE"
+            tools:targetApi="31">
+            <intent-filter>
+                <action android:name="android.companion.CompanionDeviceService" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".service.devices.pebble.webview.PebbleJsService"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="connectedDevice" />
+
+        <receiver
+            android:name=".externalevents.GenericWeatherReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="nodomain.freeyourgadget.gadgetbridge.ACTION_GENERIC_WEATHER" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".externalevents.AutoStartReceiver"
+            android:permission="android.permission.RECEIVE_BOOT_COMPLETED"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".externalevents.BluetoothStateChangeReceiver"
+            android:exported="true"
+            android:permission="android.permission.BLUETOOTH,android.permission.BLUETOOTH_ADMIN">
+            <intent-filter>
+                <action android:name="android.bluetooth.adapter.action.STATE_CHANGED" />
+                <action android:name="android.bluetooth.adapter.action.CONNECTION_STATE_CHANGED" />
+
+                <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
+                <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED" />
+                <action android:name="android.bluetooth.device.action.ACL_DISCONNECT_REQUESTED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".service.receivers.GBMusicControlReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="nodomain.freeyourgadget.gadgetbridge.musiccontrol" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".service.receivers.GBCallControlReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="nodomain.freeyourgadget.gadgetbridge.callcontrol" />
+            </intent-filter>
+        </receiver>
+        <!--
+            forcing the DebugActivity to portrait mode avoids crashes with the progress
+            dialog when changing orientation
+        -->
+        <activity
+            android:name=".activities.debug.DebugActivityV2"
+            android:label="@string/title_activity_debug"
+            android:parentActivityName=".activities.ControlCenterv2"
+            android:windowSoftInputMode="stateHidden" />
+        <activity
+            android:name=".activities.debug.preferences.PreferenceManagerActivity"
+            android:label="@string/menuitem_settings"
+            android:parentActivityName=".activities.debug.DebugActivityV2"
+            android:windowSoftInputMode="stateHidden" />
+        <activity
+            android:name=".activities.AboutActivity"
+            android:label="@string/about_activity_title"
+            android:parentActivityName=".activities.ControlCenterv2"
+            android:windowSoftInputMode="stateHidden" />
+        <activity
+            android:name=".activities.licenses.LicensesActivity"
+            android:label="@string/open_source_licenses"
+            android:parentActivityName=".activities.AboutActivity"
+            android:windowSoftInputMode="stateHidden" />
+        <activity
+            android:name=".activities.OpenFwAppInstallerActivity"
+            android:label="@string/open_fw_installer_info_text_title"
+            android:parentActivityName=".activities.ControlCenterv2"
+            android:windowSoftInputMode="stateHidden" />
+        <activity
+            android:name=".activities.BatteryInfoActivity"
+            android:label="@string/battery_detail_activity_title"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:exported="false"
+            android:name=".activities.DeviceDeleteActivity"
+            android:label="@string/controlcenter_delete_device"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.workouts.WorkoutDetailsActivity"
+            android:label="@string/activity_summary_detail"
+            android:parentActivityName=".activities.workouts.WorkoutListActivity"
+            android:windowSoftInputMode="stateHidden" />
+        <activity
+            android:name=".activities.ActivitySummariesFilter"
+            android:label="@string/activity_filter_filter_title"
+            android:parentActivityName=".activities.workouts.WorkoutListActivity"
+            android:excludeFromRecents="true"/>
+        <activity
+            android:name=".activities.DataManagementActivity"
+            android:label="@string/title_activity_db_management"
+            android:parentActivityName=".activities.ControlCenterv2"
+            android:windowSoftInputMode="stateHidden" />
+        <activity
+            android:name=".activities.NotificationManagementActivity"
+            android:label="@string/title_activity_notification_management"
+            android:parentActivityName=".activities.ControlCenterv2"
+            android:windowSoftInputMode="stateHidden" />
+        <activity
+            android:name=".activities.discovery.DiscoveryActivityV2"
+            android:label="@string/title_activity_discovery"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.AuthKeyActivity"
+            android:label="@string/pref_title_authkey"
+            android:parentActivityName=".activities.discovery.DiscoveryActivityV2" />
+        <activity
+            android:name=".activities.AndroidPairingActivity"
+            android:label="@string/title_activity_android_pairing" />
+        <activity
+            android:name=".devices.banglejs.AppsManagementActivity"
+            android:label="@string/title_activity_appmanager"
+            android:launchMode="singleTop"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|layoutDirection|uiMode"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.multipoint.MultipointPairingActivity"
+            android:label="@string/bluetooth_multipoint_pairing"
+            android:launchMode="singleTop"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|layoutDirection|uiMode"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".devices.miband.MiBandPairingActivity"
+            android:label="@string/title_activity_mi_band_pairing" />
+        <activity
+            android:name=".devices.pebble.PebblePairingActivity"
+            android:label="@string/title_activity_pebble_pairing" />
+        <activity
+            android:name=".devices.evenrealities.G1PairingActivity"
+            android:label="@string/title_activity_even_realities_g1_pairing"
+            android:parentActivityName=".activities.discovery.DiscoveryActivityV2" />
+        <activity
+            android:name=".devices.gree.GreeAcPairingActivity"
+            android:label="@string/devicetype_gree_ac"
+            android:parentActivityName=".activities.discovery.DiscoveryActivityV2" />
+        <activity
+            android:name=".devices.lenovo.watch9.Watch9PairingActivity"
+            android:label="@string/title_activity_watch9_pairing" />
+        <activity
+            android:name=".devices.lenovo.watch9.Watch9CalibrationActivity"
+            android:label="@string/title_activity_watch9_calibration" />
+        <activity
+            android:name=".devices.lenovo.watchxplus.LenovoWatchPairingActivity"
+            android:label="@string/title_activity_watch9_pairing" />
+        <activity
+            android:name=".devices.lenovo.watchxplus.LenovoWatchCalibrationActivity"
+            android:label="@string/title_activity_LenovoWatch_calibration" />
+        <activity
+            android:name=".activities.charts.ActivityChartsActivity"
+            android:label="@string/title_activity_charts"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.ConfigureAlarms"
+            android:label="@string/title_activity_set_alarm"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.ConfigureReminders"
+            android:label="@string/title_activity_set_reminders"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.ConfigureContacts"
+            android:label="@string/title_activity_set_contacts"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.widgets.WidgetScreensListActivity"
+            android:label="@string/menuitem_widgets"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.xiaomi.XiaomiVibrationPatternsActivity"
+            android:label="@string/pref_xiaomi_vibration_patterns_title"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.ConfigureWorldClocks"
+            android:label="@string/pref_world_clocks_title"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.devicesettings.DeviceSettingsActivity"
+            android:label="@string/title_activity_device_specific_settings"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.AlarmDetails"
+            android:label="@string/title_activity_alarm_details"
+            android:parentActivityName=".activities.ConfigureAlarms"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".activities.ReminderDetails"
+            android:label="@string/title_activity_reminder_details"
+            android:parentActivityName=".activities.ConfigureReminders"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".activities.ContactDetails"
+            android:label="@string/title_activity_contact_details"
+            android:parentActivityName=".activities.ConfigureReminders"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".activities.widgets.WidgetScreenDetailsActivity"
+            android:label="@string/widget_screen"
+            android:parentActivityName=".activities.widgets.WidgetScreensListActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".activities.WorldClockDetails"
+            android:label="@string/title_activity_world_clock_details"
+            android:parentActivityName=".activities.ConfigureWorldClocks"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".activities.VibrationActivity"
+            android:label="@string/title_activity_vibration"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity
+            android:name=".activities.NotificationFilterActivity"
+            android:label="@string/title_activity_notification_filter"
+            android:parentActivityName=".activities.AppBlacklistActivity"
+            android:windowSoftInputMode="stateHidden|adjustPan" />
+        <activity
+            android:name=".activities.FindPhoneActivity"
+            android:label="@string/prefs_find_phone"
+            android:launchMode="singleTask" />
+
+        <provider
+            android:name=".contentprovider.PebbleContentProvider"
+            android:authorities="@string/pebble_content_provider"
+            android:exported="true" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.screenshot_provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/shared_paths" />
+        </provider>
+
+        <receiver
+            android:name=".SleepAlarmWidget"
+            android:label="@string/appwidget_sleep_alarm_widget_label"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="nodomain.freeyourgadget.gadgetbridge.SLEEP_ALARM_WIDGET_CLICK" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sleep_alarm_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".Widget"
+            android:label="@string/widget_listing_label"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.appwidget.action.APPWIDGET_DELETED" />
+                <action android:name="android.appwidget.action.APPWIDGET_DISABLED" />
+                <action android:name="nodomain.freeyourgadget.gadgetbridge.WidgetClick" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
+
+        <activity
+            android:name=".activities.WidgetAlarmsActivity"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:theme="@style/Theme.AppCompat.Light.Dialog" />
+
+        <activity android:name=".activities.WidgetConfigurationActivity"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE"/>
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".activities.SleepAlarmWidgetConfigurationActivity"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE"/>
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".activities.ExternalPebbleJSActivity"
+            android:label="@string/app_configure"
+            android:parentActivityName=".activities.appmanager.AppManagerActivity"
+            android:exported="true">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="nodomain.freeyourgadget.gadgetbridge.activities.ControlCenterv2" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="gadgetbridge" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".devices.qhybrid.QHybridNotificationsConfigActivity"
+            android:label="@string/qhybrid_title_watchface"
+            android:exported="true"
+            android:parentActivityName=".activities.devicesettings.DeviceSettingsActivity" />
+        <activity
+            android:name=".devices.qhybrid.QHybridAppChooserActivity"
+            android:label="@string/qhybrid_title_apps"
+            android:exported="true"
+            android:parentActivityName=".devices.qhybrid.QHybridNotificationsConfigActivity" />
+        <activity
+            android:name=".devices.qhybrid.HRConfigActivity"
+            android:label="@string/qhybrid_title_watchface"
+            android:exported="true"
+            android:parentActivityName=".activities.ControlCenterv2" />
+        <activity android:name=".devices.qhybrid.WidgetSettingsActivity"
+            android:label="@string/add_widget"
+            android:parentActivityName=".devices.qhybrid.HRConfigActivity" />
+        <activity
+            android:name=".devices.qhybrid.ImageEditActivity"
+            android:label="@string/qhybrid_title_background_image"
+            android:exported="true"
+            android:parentActivityName=".devices.qhybrid.HRConfigActivity" />
+        <activity
+            android:name=".devices.qhybrid.FileManagementActivity"
+            android:label="@string/qhybrid_title_file_management"
+            android:exported="true"
+            android:parentActivityName=".devices.qhybrid.HRConfigActivity"/>
+        <activity
+            android:name=".devices.qhybrid.AppsManagementActivity"
+            android:label="@string/qhybrid_title_apps_management"
+            android:exported="true"
+            android:parentActivityName=".devices.qhybrid.HRConfigActivity" />
+        <activity
+            android:name=".devices.qhybrid.CalibrationActivity"
+            android:label="@string/qhybrid_title_calibration"
+            android:parentActivityName=".devices.qhybrid.HRConfigActivity" />
+        <activity
+            android:name=".devices.withingssteelhr.WithingsCalibrationActivity"
+            android:label="@string/qhybrid_title_calibration"
+            android:parentActivityName=".devices.withingssteelhr.WithingsCalibrationActivity" />
+        <activity
+            android:name=".devices.qhybrid.CommuteActionsActivity"
+            android:label="@string/qhybrid_pref_title_actions"
+            android:parentActivityName=".devices.qhybrid.HRConfigActivity" />
+        <activity
+            android:name=".devices.qhybrid.HybridHRWatchfaceDesignerActivity"
+            android:label="@string/qhybrid_title_watchface_designer"
+            android:screenOrientation="portrait"
+            android:launchMode="singleTop"
+            android:parentActivityName=".activities.appmanager.AppManagerActivity" />
+        <activity
+            android:name=".devices.qhybrid.HybridHRWatchfaceSettingsActivity"
+            android:label="@string/watchface_dialog_title_settings"
+            android:parentActivityName=".devices.qhybrid.HybridHRWatchfaceDesignerActivity" />
+        <activity
+            android:name=".devices.qhybrid.HybridHRWatchfaceWidgetActivity"
+            android:label="@string/watchface_dialog_title_widget"
+            android:parentActivityName=".devices.qhybrid.HybridHRWatchfaceDesignerActivity" />
+
+        <activity
+            android:name=".devices.um25.Activity.DataActivity"
+            android:exported="true" />
+
+        <activity
+            android:name=".devices.supercars.ControlActivity"
+            android:exported="true" />
+
+        <activity
+            android:name=".devices.SolarEquipmentStatusActivity"
+            android:label="Solar Equipment Status"
+            android:exported="true" />
+
+        <activity
+            android:name=".devices.binary_sensor.activity.DataActivity"
+            android:exported="true" />
+
+        <activity
+            android:name=".activities.GpxReceiverActivity"
+            android:label="@string/gpx_receiver_activity_title"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="stateHidden"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/gpx+xml" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".activities.TextReceiverActivity"
+            android:excludeFromRecents="true"
+            android:label="@string/text_receiver_activity_title"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".activities.WakeActivity"
+            android:label="WakeActivity">
+        </activity>
+
+        <activity
+            android:name=".externalevents.opentracks.OpenTracksController"
+            android:label="OpenTracks controller and intent receiver"
+            android:exported="true"/>
+
+        <activity
+            android:name=".activities.dashboard.DashboardCalendarActivity"
+            android:label="@string/menuitem_calendar"
+            android:parentActivityName=".activities.ControlCenterv2" />
+
+        <activity
+            android:name=".activities.CameraActivity"
+            android:launchMode="singleInstance"
+            android:exported="false" />
+
+        <activity
+            android:name=".devices.cycling_sensor.activity.CyclingLiveDataActivity"
+            android:launchMode="singleInstance"
+            android:exported="true" />
+
+        <activity
+            android:name=".devices.garmin.actions.GarminSendWaypointActivity"
+            android:exported="true"
+            android:label="@string/activity_send_waypoint_titel">
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.SEND" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="geo" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".activities.endurain.EndurainOAuthCallbackActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <!-- Deep link scheme for OAuth callback -->
+                <data
+                    android:scheme="${appAuthRedirectScheme}"
+                    android:host="endurain"
+                    android:pathPrefix="/oauth/callback" />
+            </intent-filter>
+        </activity>
+
+        <!-- For supported versions through Android 13, create an activity to show the rationale
+       of Health Connect permissions once users click the privacy policy link. -->
+        <activity
+            android:name=".activities.PermissionsRationaleActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+
+        <!-- For versions starting Android 14, create an activity alias to show the rationale
+             of Health Connect permissions once users click the privacy policy link. -->
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".activities.PermissionsRationaleActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Quick Settings preset tiles (API 24+). Each tile is independently assignable
+             to a device setting via QuickSettingsTilesActivity. -->
+        <service
+            android:name=".activities.quicksettings.DeviceTileService0"
+            android:exported="true"
+            android:icon="@drawable/ic_devices_other"
+            android:label="@string/qs_tile_label_1"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            tools:targetApi="24">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".activities.quicksettings.DeviceTileService1"
+            android:exported="true"
+            android:icon="@drawable/ic_devices_other"
+            android:label="@string/qs_tile_label_2"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            tools:targetApi="24">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".activities.quicksettings.DeviceTileService2"
+            android:exported="true"
+            android:icon="@drawable/ic_devices_other"
+            android:label="@string/qs_tile_label_3"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            tools:targetApi="24">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".activities.quicksettings.DeviceTileService3"
+            android:exported="true"
+            android:icon="@drawable/ic_devices_other"
+            android:label="@string/qs_tile_label_4"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            tools:targetApi="24">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".activities.quicksettings.DeviceTileService4"
+            android:exported="true"
+            android:icon="@drawable/ic_devices_other"
+            android:label="@string/qs_tile_label_5"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            tools:targetApi="24">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".activities.quicksettings.DeviceTileService5"
+            android:exported="true"
+            android:icon="@drawable/ic_devices_other"
+            android:label="@string/qs_tile_label_6"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            tools:targetApi="24">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".activities.quicksettings.DeviceTileService6"
+            android:exported="true"
+            android:icon="@drawable/ic_devices_other"
+            android:label="@string/qs_tile_label_7"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            tools:targetApi="24">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".activities.quicksettings.DeviceTileService7"
+            android:exported="true"
+            android:icon="@drawable/ic_devices_other"
+            android:label="@string/qs_tile_label_8"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            tools:targetApi="24">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".activities.quicksettings.DeviceTileService8"
+            android:exported="true"
+            android:icon="@drawable/ic_devices_other"
+            android:label="@string/qs_tile_label_9"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            tools:targetApi="24">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".activities.quicksettings.DeviceTileService9"
+            android:exported="true"
+            android:icon="@drawable/ic_devices_other"
+            android:label="@string/qs_tile_label_10"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            tools:targetApi="24">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- Configuration activity for the preset Quick Settings tiles. -->
+        <activity
+            android:name=".activities.quicksettings.QuickSettingsTilesActivity"
+            android:exported="false"
+            android:label="@string/qs_tile_activity_title"
+            android:theme="@style/Theme.AppCompat.Light.Dialog"
+            tools:targetApi="24" />
+
+        <!-- Settings screen for Quick Settings tiles and Device Controls. -->
+        <activity
+            android:name=".activities.quicksettings.QuickSettingsPreferencesActivity"
+            android:exported="true"
+            android:label="@string/pref_header_quick_settings"
+            android:parentActivityName=".activities.SettingsActivity"
+            tools:targetApi="24">
+            <!-- Handle long-press on any of the QS tiles -->
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+
+        <!--
+             This is required such that the app can query and resolve packages that have written
+             Health Connect data, and obtain their friendly App Name and Icon to show for data
+             attribution in the app
+        -->
+        <intent>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+        </intent>
+    </queries>
+</manifest>

@@ -1,0 +1,128 @@
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/activity_swipe_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="nodomain.freeyourgadget.gadgetbridge.activities.charts.ActivityChartsActivity">
+
+    <LinearLayout
+        android:id="@+id/charts_main_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/charts_pagerTabStrip"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top"
+            app:tabMode="scrollable" />
+
+        <androidx.viewpager2.widget.ViewPager2
+            android:id="@+id/charts_pager"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            tools:context="nodomain.freeyourgadget.gadgetbridge.activities.charts.ActivityChartsActivity">
+        </androidx.viewpager2.widget.ViewPager2>
+
+        <ProgressBar
+            android:id="@+id/loading_progressbar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="-8dp"
+            android:layout_marginTop="-4dp"
+            android:layout_gravity="center_horizontal"
+            android:indeterminate="true"
+            android:indeterminateOnly="true"
+            android:visibility="invisible" />
+
+    <LinearLayout
+        android:id="@+id/charts_date_bar"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="2dp"
+        android:gravity="fill_horizontal"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/charts_text_date"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:layout_weight="1"
+            android:text="@string/stats_empty_value" />
+
+    </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/charts_date_button_bar"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:gravity="fill_horizontal"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/charts_previous_month"
+                android:layout_width="wrap_content"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:padding="0dp"
+                android:layout_marginHorizontal="2dp"
+                android:text="&lt;&lt;&lt;"
+                tools:ignore="HardcodedText"/>
+
+            <Button
+                android:id="@+id/charts_previous_week"
+                android:layout_width="wrap_content"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:padding="0dp"
+                android:layout_marginHorizontal="2dp"
+                android:text="&lt;&lt;"
+                tools:ignore="HardcodedText" />
+
+            <Button
+                android:id="@+id/charts_previous_day"
+                android:layout_width="wrap_content"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:padding="0dp"
+                android:layout_marginHorizontal="2dp"
+                android:text="&lt;"
+                tools:ignore="HardcodedText"/>
+            
+            <Button
+                android:id="@+id/charts_next_day"
+                android:layout_width="wrap_content"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:padding="0dp"
+                android:layout_marginHorizontal="2dp"
+                android:text=">"
+                tools:ignore="HardcodedText"/>
+            <Button
+                android:id="@+id/charts_next_week"
+                android:layout_width="wrap_content"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:padding="0dp"
+                android:layout_marginHorizontal="2dp"
+                android:text=">>"
+                tools:ignore="HardcodedText"/>
+
+            <Button
+                android:id="@+id/charts_next_month"
+                android:layout_width="wrap_content"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:padding="0dp"
+                android:layout_marginHorizontal="2dp"
+                android:text=">>>"
+                tools:ignore="HardcodedText"/>
+
+        </LinearLayout>
+    </LinearLayout>
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

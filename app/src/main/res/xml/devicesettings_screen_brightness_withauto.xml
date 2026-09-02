@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceScreen
+        android:icon="@drawable/ic_wb_sunny"
+        android:key="pref_screen_auto_brightness"
+        android:persistent="false"
+        android:title="@string/pref_screen_brightness">
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_wb_sunny"
+            android:key="screen_auto_brightness"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/pref_screen_auto_brightness_summary"
+            android:title="@string/pref_screen_auto_brightness_title" />
+
+        <SeekBarPreference
+            android:defaultValue="50"
+            android:icon="@drawable/ic_wb_sunny"
+            android:key="screen_brightness"
+            android:max="100"
+            android:title="@string/pref_screen_brightness" />
+    </PreferenceScreen>
+</androidx.preference.PreferenceScreen>

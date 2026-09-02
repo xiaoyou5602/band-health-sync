@@ -1,0 +1,1396 @@
+/*  Copyright (C) 2022-2024 José Rebelo
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.service.devices.sony.headphones.protocol.impl.v2;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEvent;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventUpdateDeviceInfo;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventUpdatePreferences;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.SonyHeadphonesCapabilities;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.AdaptiveVolumeControl;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.AmbientSoundControl;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.AmbientSoundControlButtonMode;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.AudioLDAC;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.AudioUpsampling;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.AutomaticPowerOff;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.ButtonFunctionNcAmbient;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.ButtonModes;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.EqualizerCustomBands;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.EqualizerPreset;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.PauseWhenTakenOff;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.QuickAccess;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.SoundPosition;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.SpeakToChatConfig;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.SpeakToChatEnabled;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.SurroundMode;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.TouchSensor;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.VoiceAssistant;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.VoiceNotifications;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.CaptureVoiceDuringCall;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.ConnectTwoDevices;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.ServiceLink;
+import nodomain.freeyourgadget.gadgetbridge.devices.sony.headphones.prefs.WideAreaTap;
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.sony.headphones.deviceevents.SonyHeadphonesEnqueueRequestEvent;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.sony.headphones.protocol.MessageType;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.sony.headphones.protocol.Request;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.sony.headphones.protocol.impl.v1.PayloadTypeV1;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.sony.headphones.protocol.impl.v1.SonyProtocolImplV1;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.sony.headphones.protocol.impl.v1.params.AudioCodec;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.sony.headphones.protocol.impl.v1.params.BatteryType;
+import nodomain.freeyourgadget.gadgetbridge.util.GB;
+
+public class SonyProtocolImplV2 extends SonyProtocolImplV1 {
+    private static final Logger LOG = LoggerFactory.getLogger(SonyProtocolImplV2.class);
+
+    public SonyProtocolImplV2(final GBDevice device) {
+        super(device);
+    }
+
+    @Override
+    public Request getAmbientSoundControl() {
+        return new Request(
+                PayloadTypeV1.AMBIENT_SOUND_CONTROL_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.AMBIENT_SOUND_CONTROL_GET.getCode(),
+                        (byte) (supportsWindNoiseCancelling() || supports(SonyHeadphonesCapabilities.AmbientSoundControl2) ? 0x17 : 0x15)
+                }
+        );
+    }
+
+    @Override
+    public Request setAmbientSoundControl(final AmbientSoundControl ambientSoundControl) {
+        final ByteBuffer buf = ByteBuffer.allocate(supportsWindNoiseCancelling() ? 8 : 7);
+
+        buf.put(PayloadTypeV1.AMBIENT_SOUND_CONTROL_SET.getCode());
+        buf.put((byte) (supportsWindNoiseCancelling() || supports(SonyHeadphonesCapabilities.AmbientSoundControl2) ? 0x17 : 0x15));
+        buf.put((byte) 0x01); // 0x00 while dragging the slider?
+
+        if (AmbientSoundControl.Mode.OFF.equals(ambientSoundControl.getMode())) {
+            buf.put((byte) 0x00);
+        } else {
+            buf.put((byte) 0x01);
+        }
+
+        if (AmbientSoundControl.Mode.AMBIENT_SOUND.equals(ambientSoundControl.getMode())) {
+            buf.put((byte) 0x01);
+        } else {
+            buf.put((byte) 0x00);
+        }
+
+        if (supportsWindNoiseCancelling()) {
+            if (AmbientSoundControl.Mode.WIND_NOISE_REDUCTION.equals(ambientSoundControl.getMode())) {
+                buf.put((byte) 0x03);
+            } else {
+                buf.put((byte) 0x02);
+            }
+        }
+
+        buf.put((byte) (ambientSoundControl.isFocusOnVoice() ? 0x01 : 0x00));
+        buf.put((byte) (ambientSoundControl.getAmbientSound()));
+
+        return new Request(PayloadTypeV1.AMBIENT_SOUND_CONTROL_SET.getMessageType(), buf.array());
+    }
+
+    @Override
+    public Request setAdaptiveVolumeControl(final AdaptiveVolumeControl config) {
+        return new Request(
+                PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_SET.getCode(),
+                        (byte) 0x0a,
+                        (byte) (config.isEnabled() ? 0x00 : 0x01) // this is reversed on V2...?
+                }
+        );
+    }
+
+    @Override
+    public Request getAdaptiveVolumeControl() {
+        return new Request(
+                PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_GET.getCode(),
+                        (byte) 0x0a
+                }
+        );
+    }
+
+    @Override
+    public Request setSpeakToChatEnabled(SpeakToChatEnabled config) {
+        return new Request(
+                PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_SET.getCode(),
+                        (byte) 0x0c,
+                        (byte) (config.isEnabled() ? 0x00 : 0x01), // TODO it's reversed?
+                        (byte) 0x01
+                }
+        );
+    }
+
+    @Override
+    public Request getSpeakToChatEnabled() {
+        return new Request(
+                PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_GET.getCode(),
+                        (byte) 0x0c
+                }
+        );
+    }
+
+    @Override
+    public Request setSpeakToChatConfig(SpeakToChatConfig config) {
+        return new Request(
+                PayloadTypeV1.SPEAK_TO_CHAT_CONFIG_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.SPEAK_TO_CHAT_CONFIG_SET.getCode(),
+                        (byte) 0x0c,
+                        config.getSensitivity().getCode(),
+                        config.getTimeout().getCode()
+                }
+        );
+    }
+
+    @Override
+    public Request getSpeakToChatConfig() {
+        return new Request(
+                PayloadTypeV1.SPEAK_TO_CHAT_CONFIG_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.SPEAK_TO_CHAT_CONFIG_GET.getCode(),
+                        (byte) 0x0c
+                }
+        );
+    }
+
+    @Override
+    public Request getNoiseCancellingOptimizerState() {
+        LOG.warn("Noise cancelling optimizer not implemented for V2");
+        return null;
+    }
+
+    @Override
+    public Request getAudioCodec() {
+        return new Request(
+                PayloadTypeV2.AUDIO_CODEC_REQUEST.getMessageType(),
+                new byte[]{
+                        PayloadTypeV2.AUDIO_CODEC_REQUEST.getCode(),
+                        (byte) 0x02
+                }
+        );
+    }
+
+    @Override
+    public Request getBattery(final BatteryType batteryType) {
+        return new Request(
+                PayloadTypeV2.BATTERY_LEVEL_REQUEST.getMessageType(),
+                new byte[]{
+                        PayloadTypeV2.BATTERY_LEVEL_REQUEST.getCode(),
+                        encodeBatteryType(batteryType)
+                }
+        );
+    }
+
+    @Override
+    public Request getFirmwareVersion() {
+        return super.getFirmwareVersion();
+    }
+
+    @Override
+    public Request getAudioUpsampling() {
+        return new Request(
+                PayloadTypeV1.AUDIO_UPSAMPLING_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.AUDIO_UPSAMPLING_GET.getCode(),
+                        (byte) 0x01
+                }
+        );
+    }
+
+    @Override
+    public Request getAudioLDAC() {
+        // In V2, connection quality (LDAC vs SBC) uses AUDIO_UPSAMPLING_GET with subtype 0x02
+        return new Request(
+                PayloadTypeV1.AUDIO_UPSAMPLING_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.AUDIO_UPSAMPLING_GET.getCode(),
+                        (byte) 0x02
+                }
+        );
+    }
+
+    @Override
+    public Request setAudioLDAC(final AudioLDAC config) {
+        // In V2, connection quality (LDAC vs SBC) uses AUDIO_UPSAMPLING_SET with subtype 0x02
+        // enabled (sound quality / LDAC) = 0x00, disabled (stable connection / SBC) = 0x01
+        return new Request(
+                PayloadTypeV1.AUDIO_UPSAMPLING_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.AUDIO_UPSAMPLING_SET.getCode(),
+                        (byte) 0x02,
+                        (byte) (config.isEnabled() ? 0x00 : 0x01)
+                }
+        );
+    }
+
+    @Override
+    public Request getButtonFunctionNcAmbient() {
+        LOG.warn("Button function NC ambient get not implemented for V2");
+        return null;
+    }
+
+    @Override
+    public Request setButtonFunctionNcAmbient(final ButtonFunctionNcAmbient config) {
+        LOG.warn("Button function NC ambient set not implemented for V2");
+        return null;
+    }
+
+    @Override
+    public Request setAudioUpsampling(final AudioUpsampling config) {
+        return new Request(
+                PayloadTypeV1.AUDIO_UPSAMPLING_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.AUDIO_UPSAMPLING_SET.getCode(),
+                        (byte) 0x01,
+                        (byte) (config.isEnabled() ? 0x01 : 0x00)
+                }
+        );
+    }
+
+    @Override
+    public Request getAutomaticPowerOff() {
+        return new Request(
+                PayloadTypeV2.AUTOMATIC_POWER_OFF_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV2.AUTOMATIC_POWER_OFF_GET.getCode(),
+                        (byte) 0x05
+                }
+        );
+    }
+
+    @Override
+    public Request setAutomaticPowerOff(final AutomaticPowerOff config) {
+        return new Request(
+                PayloadTypeV2.AUTOMATIC_POWER_OFF_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV2.AUTOMATIC_POWER_OFF_SET.getCode(),
+                        (byte) 0x05,
+                        config.getCode()[0],
+                        config.getCode()[1]
+                }
+        );
+    }
+
+    @Override
+    public Request setWideAreaTap(final WideAreaTap config) {
+        return new Request(
+                PayloadTypeV1.TOUCH_SENSOR_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.TOUCH_SENSOR_SET.getCode(),
+                        (byte) 0xd1,
+                        (byte) 0x00,
+                        (byte) (config.isEnabled() ? 0x00 : 0x01) // this is reversed on V2...?
+                }
+        );
+    }
+
+    @Override
+    public Request getWideAreaTap() {
+        return new Request(
+                PayloadTypeV1.TOUCH_SENSOR_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.TOUCH_SENSOR_GET.getCode(),
+                        (byte) 0xd1
+                }
+        );
+    }
+
+    @Override
+    public Request getCaptureVoiceDuringCall() {
+        return new Request(
+                PayloadTypeV1.TOUCH_SENSOR_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.TOUCH_SENSOR_GET.getCode(),
+                        (byte) 0xd3
+                }
+        );
+    }
+
+    @Override
+    public Request setCaptureVoiceDuringCall(final CaptureVoiceDuringCall config) {
+        return new Request(
+                PayloadTypeV1.TOUCH_SENSOR_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.TOUCH_SENSOR_SET.getCode(),
+                        (byte) 0xd3,
+                        (byte) 0x00,
+                        (byte) (config.isEnabled() ? 0x00 : 0x01)
+                }
+        );
+    }
+
+    @Override
+    public Request getServiceLink() {
+        return new Request(
+                PayloadTypeV2.SERVICE_LINK_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV2.SERVICE_LINK_GET.getCode(),
+                        (byte) 0x10
+                }
+        );
+    }
+
+    @Override
+    public Request setServiceLink(final ServiceLink config) {
+        return new Request(
+                PayloadTypeV2.SERVICE_LINK_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV2.SERVICE_LINK_SET.getCode(),
+                        (byte) 0x10,
+                        (byte) (config.isEnabled() ? 0x00 : 0x01)
+                }
+        );
+    }
+
+    @Override
+    public Request applyServiceLink(final ServiceLink config) {
+        return new Request(
+                PayloadTypeV2.SYSTEM_CONTROL_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV2.SYSTEM_CONTROL_SET.getCode(),
+                        (byte) 0x00,
+                        (byte) (config.isEnabled() ? 0x29 : 0x1e),
+                        (byte) 0x01
+                }
+        );
+    }
+
+    @Override
+    public Request setConnectTwoDevices(final ConnectTwoDevices config) {
+        // 0x98 00 06 01 is a fixed "apply" commit sent for both ON and OFF;
+        // the actual state change is driven by the preceding setWideAreaTap call.
+        return new Request(
+                PayloadTypeV2.SYSTEM_CONTROL_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV2.SYSTEM_CONTROL_SET.getCode(),
+                        (byte) 0x00,
+                        (byte) 0x06,
+                        (byte) 0x01
+                }
+        );
+    }
+
+    @Override
+    public Request getConnectTwoDevices() {
+        // In V2, the actual CTD state is carried by the WideAreaTap (TOUCH_SENSOR) response.
+        // Delegate to getWideAreaTap() so the init capabilityRequestMap sends a TOUCH_SENSOR_GET,
+        // whose TOUCH_SENSOR_RET reply is handled by handleTouchSensor(), which updates both
+        // WideAreaTap and ConnectTwoDevices preferences with the correct co-directional value.
+        // (SYSTEM_CONTROL_RET always returns value=01 regardless of actual CTD state.)
+        return getWideAreaTap();
+    }
+
+    @Override
+    public Request getButtonModes() {
+        return new Request(
+                PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_GET.getCode(),
+                        (byte) 0x03
+                }
+        );
+    }
+
+    @Override
+    public Request setButtonModes(final ButtonModes config) {
+        return new Request(
+                PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_SET.getCode(),
+                        (byte) 0x03,
+                        (byte) 0x02,
+                        encodeButtonMode(config.getModeLeft()),
+                        encodeButtonMode(config.getModeRight())
+                }
+        );
+    }
+
+    @Override
+    public Request getQuickAccess() {
+        return new Request(
+                PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_GET.getCode(),
+                        (byte) 0x0d
+                }
+        );
+    }
+
+    @Override
+    public Request setQuickAccess(final QuickAccess quickAccess) {
+        return new Request(
+                PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_SET.getCode(),
+                        (byte) 0x0d,
+                        (byte) 0x02,
+                        quickAccess.getModeDoubleTap().getCode(),
+                        quickAccess.getModeTripleTap().getCode()
+                }
+        );
+    }
+
+    @Override
+    public Request getAmbientSoundControlButtonMode() {
+        return new Request(
+                PayloadTypeV2.AMBIENT_SOUND_CONTROL_BUTTON_MODE_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV2.AMBIENT_SOUND_CONTROL_BUTTON_MODE_GET.getCode(),
+                        (byte) 0x03
+                }
+        );
+    }
+
+    @Override
+    public Request setAmbientSoundControlButtonMode(final AmbientSoundControlButtonMode ambientSoundControlButtonMode) {
+        return new Request(
+                PayloadTypeV2.AMBIENT_SOUND_CONTROL_BUTTON_MODE_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV2.AMBIENT_SOUND_CONTROL_BUTTON_MODE_SET.getCode(),
+                        (byte) 0x03,
+                        (byte) 0x01,
+                        (byte) (supports(SonyHeadphonesCapabilities.AmbientSoundControl2) ? 0x00 : 0x35),
+                        (byte) 0x01,
+                        (byte) 0x00,
+                        ambientSoundControlButtonMode.getCode()
+                }
+        );
+    }
+
+    @Override
+    public Request getPauseWhenTakenOff() {
+        return new Request(
+                PayloadTypeV2.AUTOMATIC_POWER_OFF_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV2.AUTOMATIC_POWER_OFF_GET.getCode(),
+                        (byte) 0x01
+                }
+        );
+    }
+
+    @Override
+    public Request setPauseWhenTakenOff(final PauseWhenTakenOff config) {
+        return new Request(
+                PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_SET.getCode(),
+                        (byte) 0x01,
+                        (byte) (config.isEnabled() ? 0x00 : 0x01) // this is reversed on V2...?
+                }
+        );
+    }
+
+    @Override
+    public Request getEqualizer() {
+        return new Request(
+                PayloadTypeV1.EQUALIZER_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.EQUALIZER_GET.getCode(),
+                        (byte) 0x00
+                }
+        );
+    }
+
+    @Override
+    public Request setEqualizerPreset(final EqualizerPreset config) {
+        return new Request(
+                PayloadTypeV1.EQUALIZER_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.EQUALIZER_SET.getCode(),
+                        (byte) 0x00,
+                        config.getCode(),
+                        (byte) 0x00
+                }
+        );
+    }
+
+    @Override
+    public Request setEqualizerCustomBands(final EqualizerCustomBands config) {
+        final ByteBuffer buf = ByteBuffer.allocate(10);
+
+        buf.put(PayloadTypeV1.EQUALIZER_SET.getCode());
+        buf.put((byte) 0x00);
+        buf.put((byte) 0xa0);
+        buf.put((byte) 0x06);
+
+        buf.put((byte) (config.getBass() + 10));
+        for (final Integer band : config.getBands()) {
+            buf.put((byte) (band + 10));
+        }
+
+        return new Request(
+                PayloadTypeV1.EQUALIZER_SET.getMessageType(),
+                buf.array()
+        );
+    }
+
+    @Override
+    public Request getSoundPosition() {
+        LOG.warn("Sound position not implemented for V2");
+        return null;
+    }
+
+    @Override
+    public Request setSoundPosition(final SoundPosition config) {
+        LOG.warn("Sound position not implemented for V2");
+        return null;
+    }
+
+    @Override
+    public Request getSurroundMode() {
+        LOG.warn("Surround mode not implemented for V2");
+        return null;
+    }
+
+    @Override
+    public Request setSurroundMode(final SurroundMode config) {
+        LOG.warn("Surround mode not implemented for V2");
+        return null;
+    }
+
+    @Override
+    public Request getTouchSensor() {
+        return new Request(
+                PayloadTypeV1.TOUCH_SENSOR_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.TOUCH_SENSOR_GET.getCode(),
+                        (byte) 0xd2
+                }
+        );
+    }
+
+    @Override
+    public Request setTouchSensor(final TouchSensor config) {
+        return new Request(
+                PayloadTypeV1.TOUCH_SENSOR_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.TOUCH_SENSOR_SET.getCode(),
+                        (byte) 0xd2,
+                        (byte) 0x00,
+                        (byte) (config.isEnabled() ? 0x00 : 0x01)
+                }
+        );
+    }
+
+    @Override
+    public Request getVoiceAssistant() {
+        return new Request(
+                PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_GET.getCode(),
+                        (byte) 0x04
+                }
+        );
+    }
+
+    @Override
+    public Request setVoiceAssistant(final VoiceAssistant config) {
+        return new Request(
+                PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.AUTOMATIC_POWER_OFF_BUTTON_MODE_SET.getCode(),
+                        (byte) 0x04,
+                        config.getMode().getCode()
+                }
+        );
+    }
+
+    @Override
+    public Request getVoiceNotifications() {
+        return new Request(
+                PayloadTypeV1.VOICE_NOTIFICATIONS_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.VOICE_NOTIFICATIONS_GET.getCode(),
+                        (byte) 0x01
+                }
+        );
+    }
+
+    @Override
+    public Request setVoiceNotifications(final VoiceNotifications config) {
+        return new Request(
+                PayloadTypeV1.VOICE_NOTIFICATIONS_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.VOICE_NOTIFICATIONS_SET.getCode(),
+                        (byte) 0x01,
+                        (byte) (config.isEnabled() ? 0x00 : 0x01)  // reversed?
+                }
+        );
+    }
+
+    @Override
+    public Request getVoiceNotificationsVolume() {
+        return new Request(
+                PayloadTypeV1.VOICE_NOTIFICATIONS_GET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.VOICE_NOTIFICATIONS_GET.getCode(),
+                        (byte) 0x20
+                }
+        );
+    }
+
+    @Override
+    public Request setVoiceNotificationsVolume(final VoiceNotifications config) {
+        return new Request(
+                PayloadTypeV1.VOICE_NOTIFICATIONS_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV1.VOICE_NOTIFICATIONS_SET.getCode(),
+                        (byte) 0x20,
+                        (byte) config.getVolume(),
+                        (byte) 0x00
+                }
+        );
+    }
+
+    @Override
+    public Request startNoiseCancellingOptimizer(final boolean start) {
+        LOG.warn("Noise cancelling optimizer not implemented for V2");
+        return null;
+    }
+
+    @Override
+    public Request powerOff() {
+        return new Request(
+                PayloadTypeV2.POWER_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV2.POWER_SET.getCode(),
+                        (byte) 0x03,
+                        (byte) 0x01
+                }
+        );
+    }
+
+    @Override
+    public Request reboot() {
+        return new Request(
+                PayloadTypeV2.SYSTEM_CONTROL_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV2.SYSTEM_CONTROL_SET.getCode(),
+                        (byte) 0x00,
+                        (byte) 0x16,
+                        (byte) 0x01
+                }
+        );
+    }
+
+    @Override
+    public Request factoryReset() {
+        return new Request(
+                PayloadTypeV2.FACTORY_RESET_SET.getMessageType(),
+                new byte[]{
+                        PayloadTypeV2.FACTORY_RESET_SET.getCode(),
+                        (byte) 0x09,
+                        (byte) 0x01
+                }
+        );
+    }
+
+    @Override
+    public Request getVolume() {
+        LOG.warn("Volume not implemented for V2");
+        return null;
+    }
+
+    @Override
+    public Request setVolume(final int volume) {
+        LOG.warn("Volume not implemented for V2");
+        return null;
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handlePayload(final MessageType messageType, final byte[] payload) {
+        final PayloadTypeV2 payloadType = PayloadTypeV2.fromCode(messageType, payload[0]);
+
+        switch (payloadType) {
+            case AUDIO_CODEC_REPLY:
+            case AUDIO_CODEC_NOTIFY:
+                return handleAudioCodec(payload);
+            case BATTERY_LEVEL_NOTIFY:
+            case BATTERY_LEVEL_REPLY:
+                return handleBattery(payload);
+            case AUTOMATIC_POWER_OFF_RET:
+            case AUTOMATIC_POWER_OFF_NOTIFY:
+                return handleAutomaticPowerOff(payload);
+            case AMBIENT_SOUND_CONTROL_BUTTON_MODE_RET:
+            case AMBIENT_SOUND_CONTROL_BUTTON_MODE_NOTIFY:
+                return handleAmbientSoundControlButtonMode(payload);
+            case SYSTEM_CONTROL_RET:
+                return handleSystemControl(payload);
+            case SERVICE_LINK_RET:
+            case SERVICE_LINK_NOTIFY:
+                return handleServiceLink(payload);
+        }
+
+        return super.handlePayload(messageType, payload);
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleInitResponse(final byte[] payload) {
+        final List<GBDeviceEvent> events = new ArrayList<>(super.handleInitResponse(payload));
+        if (supports(SonyHeadphonesCapabilities.VoiceNotifications)) {
+            final Request volumeGet = getVoiceNotificationsVolume();
+            if (volumeGet != null) {
+                for (final GBDeviceEvent event : events) {
+                    if (event instanceof SonyHeadphonesEnqueueRequestEvent) {
+                        ((SonyHeadphonesEnqueueRequestEvent) event).getRequests().add(volumeGet);
+                        break;
+                    }
+                }
+            }
+        }
+        return events;
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleAmbientSoundControl(final byte[] payload) {
+        if (payload.length < 6 || payload.length > 8) {
+            LOG.warn("Unexpected payload length {}", payload.length);
+            return Collections.emptyList();
+        }
+
+        if (payload[1] != 0x15 && payload[1] != 0x17 && payload[1] != 0x22) {
+            LOG.warn("Not ambient sound control, ignoring {}", payload[1]);
+            return Collections.emptyList();
+        }
+
+        final boolean includesWindNoiseReduction = payload[1] == 0x17 && payload.length > 7;
+        final boolean noNoiseCancelling = payload[1] == 0x22;
+
+        AmbientSoundControl.Mode mode = null;
+
+        if (payload[3] == (byte) 0x00) {
+            mode = AmbientSoundControl.Mode.OFF;
+        } else if (payload[3] == (byte) 0x01) {
+            // Enabled, determine mode
+
+            if (includesWindNoiseReduction) {
+                if (payload[5] == 0x03 || payload[5] == 0x05) {
+                    mode = AmbientSoundControl.Mode.WIND_NOISE_REDUCTION;
+                } else if (payload[5] == 0x02) {
+                    if (payload[4] == (byte) 0x00) {
+                        mode = AmbientSoundControl.Mode.NOISE_CANCELLING;
+                    } else if (payload[4] == (byte) 0x01) {
+                        mode = AmbientSoundControl.Mode.AMBIENT_SOUND;
+                    }
+                }
+            } else if (noNoiseCancelling) {
+                mode = AmbientSoundControl.Mode.AMBIENT_SOUND;
+            } else {
+                if (payload[4] == (byte) 0x00) {
+                    mode = AmbientSoundControl.Mode.NOISE_CANCELLING;
+                } else if (payload[4] == (byte) 0x01) {
+                    mode = AmbientSoundControl.Mode.AMBIENT_SOUND;
+                }
+            }
+        }
+
+        if (mode == null) {
+            LOG.warn("Unable to determine ambient sound control mode from {}", GB.hexdump(payload));
+            return Collections.emptyList();
+        }
+
+        int i = payload.length - 2;
+        final Boolean focusOnVoice = booleanFromByte(payload[i]);
+        if (focusOnVoice == null) {
+            LOG.warn("Unknown focus on voice mode {}", String.format("%02x", payload[i]));
+            return Collections.emptyList();
+        }
+
+        i++;
+        int ambientSound = payload[i];
+        if (ambientSound < 0 || ambientSound > 20) {
+            LOG.warn("Ambient sound level {} is out of range", String.format("%02x", payload[i]));
+            return Collections.emptyList();
+        }
+
+        final AmbientSoundControl ambientSoundControl = new AmbientSoundControl(mode, focusOnVoice, ambientSound);
+
+        LOG.debug("Ambient sound control: {}", ambientSoundControl);
+
+        final GBDeviceEventUpdatePreferences eventUpdatePreferences = new GBDeviceEventUpdatePreferences()
+                .withPreferences(ambientSoundControl.toPreferences());
+
+        return Collections.singletonList(eventUpdatePreferences);
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleNoiseCancellingOptimizerStatus(final byte[] payload) {
+        LOG.warn("Touch sensor not implemented for V2");
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleNoiseCancellingOptimizerState(final byte[] payload) {
+        LOG.warn("Touch sensor not implemented for V2");
+        return Collections.emptyList();
+    }
+
+
+    @Override
+    public List<? extends GBDeviceEvent> handleAudioUpsampling(final byte[] payload) {
+        if (payload.length != 3) {
+            LOG.warn("Unexpected payload length {}", payload.length);
+            return Collections.emptyList();
+        }
+
+        final Boolean value = booleanFromByte(payload[2]);
+        if (value == null) {
+            LOG.warn("Unknown audio upsampling code {}", String.format("%02x", payload[2]));
+            return Collections.emptyList();
+        }
+
+        switch (payload[1]) {
+            case 0x01:
+                // DSEE / Audio upsampling
+                LOG.debug("Audio Upsampling: {}", value);
+                return Collections.singletonList(new GBDeviceEventUpdatePreferences()
+                        .withPreferences(new AudioUpsampling(value).toPreferences()));
+            case 0x02:
+                // Bluetooth connection quality: 0x00 = sound quality (LDAC), 0x01 = stable connection (SBC)
+                // value=true means payload[2]=0x01 (stable), so LDAC enabled = !value
+                LOG.debug("Bluetooth Connection Quality (LDAC): {}", !value);
+                return Collections.singletonList(new GBDeviceEventUpdatePreferences()
+                        .withPreferences(new AudioLDAC(!value).toPreferences()));
+            default:
+                LOG.warn("Unknown audio upsampling subtype {}", String.format("%02x", payload[1]));
+                return Collections.emptyList();
+        }
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleAutomaticPowerOff(final byte[] payload) {
+        if (payload.length != 4) {
+            LOG.warn("Unexpected payload length {}", payload.length);
+            return Collections.emptyList();
+        }
+
+        if (payload[1] != 0x05) {
+            LOG.warn("Not automatic power off config, ignoring");
+            return Collections.emptyList();
+        }
+
+        final AutomaticPowerOff mode = AutomaticPowerOff.fromCode(payload[2], payload[3]);
+        if (mode == null) {
+            LOG.warn("Unknown automatic power off codes {}", String.format("%02x %02x", payload[2], payload[3]));
+            return Collections.emptyList();
+        }
+
+        LOG.debug("Automatic Power Off: {}", mode);
+
+        final GBDeviceEventUpdatePreferences event = new GBDeviceEventUpdatePreferences()
+                .withPreferences(mode.toPreferences());
+
+        return Collections.singletonList(event);
+    }
+
+    public List<? extends GBDeviceEvent> handleAdaptiveVolumeControl(final byte[] payload) {
+        if (payload.length != 3) {
+            LOG.warn("Unexpected payload length {}", payload.length);
+            return Collections.emptyList();
+        }
+
+        if (payload[1] != 0x0a) {
+            LOG.warn("Not adaptive volume control, ignoring");
+            return Collections.emptyList();
+        }
+
+        final Boolean disabled = booleanFromByte(payload[2]);
+        if (disabled == null) {
+            LOG.warn("Unknown adaptive volume control code {}", String.format("%02x", payload[2]));
+            return Collections.emptyList();
+        }
+
+        LOG.debug("Adaptive volume control: {}", !disabled);
+
+        final GBDeviceEventUpdatePreferences event = new GBDeviceEventUpdatePreferences()
+                .withPreferences(new AdaptiveVolumeControl(!disabled).toPreferences());
+
+        return Collections.singletonList(event);
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleSpeakToChatEnabled(final byte[] payload) {
+        if (payload.length != 4) {
+            LOG.warn("Unexpected payload length {}", payload.length);
+            return Collections.emptyList();
+        }
+
+        if (payload[1] != 0x0c) {
+            LOG.warn("Not speak to chat enabled, ignoring");
+            return Collections.emptyList();
+        }
+
+        final Boolean disabled = booleanFromByte(payload[2]);
+        if (disabled == null) {
+            LOG.warn("Unknown speak to chat enabled code {}", String.format("%02x", payload[2]));
+            return Collections.emptyList();
+        }
+
+        LOG.debug("Speak to chat: {}", !disabled);
+
+        final GBDeviceEventUpdatePreferences event = new GBDeviceEventUpdatePreferences()
+                .withPreferences(new SpeakToChatEnabled(!disabled).toPreferences());
+
+        return Collections.singletonList(event);
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleSpeakToChatConfig(final byte[] payload) {
+        if (payload.length != 4) {
+            LOG.warn("Unexpected payload length {}", payload.length);
+            return Collections.emptyList();
+        }
+
+        if (payload[1] != 0x0c) {
+            LOG.warn("Not speak to chat config, ignoring");
+            return Collections.emptyList();
+        }
+
+        final SpeakToChatConfig.Sensitivity sensitivity = SpeakToChatConfig.Sensitivity.fromCode(payload[2]);
+        if (sensitivity == null) {
+            LOG.warn("Unknown sensitivity code {}", String.format("%02x", payload[2]));
+            return Collections.emptyList();
+        }
+
+        final SpeakToChatConfig.Timeout timeout = SpeakToChatConfig.Timeout.fromCode(payload[3]);
+        if (timeout == null) {
+            LOG.warn("Unknown timeout code {}", String.format("%02x", payload[3]));
+            return Collections.emptyList();
+        }
+
+        final SpeakToChatConfig speakToChatConfig = new SpeakToChatConfig(false, sensitivity, timeout);
+
+        LOG.debug("Speak to chat config: {}", speakToChatConfig);
+
+        final GBDeviceEventUpdatePreferences event = new GBDeviceEventUpdatePreferences()
+                .withPreferences(speakToChatConfig.toPreferences());
+
+        return Collections.singletonList(event);
+    }
+
+    public List<? extends GBDeviceEvent> handleQuickAccess(final byte[] payload) {
+        if (payload.length != 5) {
+            LOG.warn("Unexpected payload length {}", payload.length);
+            return Collections.emptyList();
+        }
+
+        if (payload[1] != 0x0d || payload[2] != 0x02) {
+            LOG.warn("Unexpected quick access payload bytes {}", String.format("%02x %02x", payload[1], payload[2]));
+            return Collections.emptyList();
+        }
+
+        final QuickAccess.Mode modeDouble = QuickAccess.Mode.fromCode(payload[3]);
+        final QuickAccess.Mode modeTriple = QuickAccess.Mode.fromCode(payload[4]);
+        if (modeDouble == null || modeTriple == null) {
+            LOG.warn("Unknown quick access codes {}", String.format("%02x %02x", payload[3], payload[4]));
+            return Collections.emptyList();
+        }
+
+        LOG.debug("Quick Access: Double Tap: {}, Triple Tap: {}", modeDouble, modeTriple);
+
+        final GBDeviceEventUpdatePreferences event = new GBDeviceEventUpdatePreferences()
+                .withPreferences(new QuickAccess(modeDouble, modeTriple).toPreferences());
+
+        return Collections.singletonList(event);
+    }
+
+    public List<? extends GBDeviceEvent> handleVoiceAssistant(final byte[] payload) {
+        if (payload.length != 3) {
+            LOG.warn("Unexpected voice assistant payload length {}", payload.length);
+            return Collections.emptyList();
+        }
+
+        if (payload[1] != (byte) 0x04) {
+            LOG.warn("Unexpected voice assistant subtype {}", String.format("%02x", payload[1]));
+            return Collections.emptyList();
+        }
+
+        final VoiceAssistant.Mode mode = VoiceAssistant.Mode.fromCode(payload[2]);
+        if (mode == null) {
+            LOG.warn("Unknown voice assistant mode {}", String.format("%02x", payload[2]));
+            return Collections.emptyList();
+        }
+
+        LOG.debug("Voice Assistant: {}", mode);
+
+        return Collections.singletonList(new GBDeviceEventUpdatePreferences()
+                .withPreferences(new VoiceAssistant(mode).toPreferences()));
+    }
+
+    public List<? extends GBDeviceEvent> handleAmbientSoundControlButtonMode(final byte[] payload) {
+        if (payload.length == 4 && payload[1] == 0x0c) {
+            // FIXME split this
+            return handleSpeakToChatConfig(payload);
+        }
+
+        if (payload.length != 7) {
+            LOG.warn("Unexpected payload length {}", payload.length);
+            return Collections.emptyList();
+        }
+
+        if (payload[1] != 0x03 || payload[2] != 0x01 || (payload[3] != 0x00 && payload[3] != 0x35) || payload[4] != 0x01 || payload[5] != 0x00) {
+            LOG.warn(
+                    "Unexpected ambient sound control button mode payload bytes {}",
+                    String.format("%02x %02x %02x %02x %02x", payload[1], payload[2], payload[3], payload[4], payload[5])
+            );
+            return Collections.emptyList();
+        }
+
+        final AmbientSoundControlButtonMode mode = AmbientSoundControlButtonMode.fromCode(payload[6]);
+        if (mode == null) {
+            LOG.warn("Unknown ambient sound control button mode code {}", String.format("%02x", payload[6]));
+            return Collections.emptyList();
+        }
+
+        LOG.debug("Ambient Sound Control Button Mode: {}", mode);
+
+        final GBDeviceEventUpdatePreferences event = new GBDeviceEventUpdatePreferences()
+                .withPreferences(mode.toPreferences());
+
+        return Collections.singletonList(event);
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleButtonModes(final byte[] payload) {
+        if (payload.length != 5) {
+            LOG.warn("Unexpected payload length {}", payload.length);
+            return Collections.emptyList();
+        }
+
+        if (payload[1] != 0x03) {
+            LOG.warn("Not button mode config, ignoring");
+            return Collections.emptyList();
+        }
+
+        final ButtonModes.Mode modeLeft = decodeButtonMode(payload[3]);
+        final ButtonModes.Mode modeRight = decodeButtonMode(payload[4]);
+
+        if (modeLeft == null || modeRight == null) {
+            LOG.warn("Unknown button mode codes {}", String.format("%02x %02x", payload[3], payload[4]));
+            return Collections.emptyList();
+        }
+
+        LOG.debug("Button Modes: L: {}, R: {}", modeLeft, modeRight);
+
+        final GBDeviceEventUpdatePreferences event = new GBDeviceEventUpdatePreferences()
+                .withPreferences(new ButtonModes(modeLeft, modeRight).toPreferences());
+
+        return Collections.singletonList(event);
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handlePauseWhenTakenOff(final byte[] payload) {
+        if (payload.length != 3) {
+            LOG.warn("Unexpected payload length {}", payload.length);
+            return Collections.emptyList();
+        }
+
+        if (payload[1] != 0x01) {
+            LOG.warn("Not pause when taken off, ignoring");
+            return Collections.emptyList();
+        }
+
+        final Boolean disabled = booleanFromByte(payload[2]);
+        if (disabled == null) {
+            LOG.warn("Unknown pause when taken off code {}", String.format("%02x", payload[2]));
+            return Collections.emptyList();
+        }
+
+        LOG.debug("Pause when taken off: {}", !disabled);
+
+        final GBDeviceEventUpdatePreferences event = new GBDeviceEventUpdatePreferences()
+                .withPreferences(new PauseWhenTakenOff(!disabled).toPreferences());
+
+        return Collections.singletonList(event);
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleBattery(final byte[] payload) {
+        return super.handleBattery(payload);
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleAudioCodec(final byte[] payload) {
+        if (payload.length != 3) {
+            LOG.warn("Unexpected payload length {}", payload.length);
+            return Collections.emptyList();
+        }
+
+        if (payload[1] != 0x02) {
+            LOG.warn("Not audio codec, ignoring");
+            return Collections.emptyList();
+        }
+
+        final AudioCodec audioCodec = AudioCodec.fromCode(payload[2]);
+        if (audioCodec == null) {
+            LOG.warn("Unable to determine audio codec from {}", GB.hexdump(payload));
+            return Collections.emptyList();
+        }
+
+        final GBDeviceEventUpdateDeviceInfo gbDeviceEventUpdateDeviceInfo = new GBDeviceEventUpdateDeviceInfo("AUDIO_CODEC: ", audioCodec.name());
+
+        final GBDeviceEventUpdatePreferences gbDeviceEventUpdatePreferences = new GBDeviceEventUpdatePreferences()
+                .withPreference(DeviceSettingsPreferenceConst.PREF_SONY_AUDIO_CODEC, audioCodec.name().toLowerCase(Locale.getDefault()));
+
+        return Arrays.asList(gbDeviceEventUpdateDeviceInfo, gbDeviceEventUpdatePreferences);
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleEqualizer(final byte[] payload) {
+        return super.handleEqualizer(payload);
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleFirmwareVersion(final byte[] payload) {
+        return super.handleFirmwareVersion(payload);
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleJson(final byte[] payload) {
+        LOG.warn("JSON not implemented for V2");
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleAutomaticPowerOffButtonMode(final byte[] payload) {
+        switch (payload[1]) {
+            case 0x01:
+                return handlePauseWhenTakenOff(payload);
+            case 0x03:
+                return handleButtonModes(payload);
+            case 0x04:
+                return handleVoiceAssistant(payload);
+            case 0x0a:
+                return handleAdaptiveVolumeControl(payload);
+            case 0x0c:
+                return handleSpeakToChatEnabled(payload);
+            case 0x0d:
+                return handleQuickAccess(payload);
+        }
+
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleVirtualSound(final byte[] payload) {
+        LOG.warn("Virtual sound not implemented for V2");
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleSoundPosition(final byte[] payload) {
+        LOG.warn("Sound position not implemented for V2");
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleSurroundMode(final byte[] payload) {
+        LOG.warn("Surround mode not implemented for V2");
+        return Collections.emptyList();
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleTouchSensor(final byte[] payload) {
+        if (payload.length != 4) {
+            LOG.warn("Unexpected payload length {}", payload.length);
+            return Collections.emptyList();
+        }
+
+        final boolean enabled = payload[3] == (byte) 0x00;
+        switch (payload[1]) {
+            case (byte) 0xd1: {
+                // WideAreaTap / ConnectTwoDevices — reversed logic in V2
+                LOG.debug("Wide Area Tap: {}", enabled);
+                // WAT and ConnectTwoDevices are co-directional: WAT=enabled ↔ CTD=enabled
+                return Collections.singletonList(new GBDeviceEventUpdatePreferences()
+                        .withPreferences(new WideAreaTap(enabled).toPreferences())
+                        .withPreferences(new ConnectTwoDevices(enabled).toPreferences()));
+            }
+            case (byte) 0xd2: {
+                // Touch Sensor Control Panel
+                LOG.debug("Touch Sensor: {}", enabled);
+                return Collections.singletonList(new GBDeviceEventUpdatePreferences()
+                        .withPreferences(new TouchSensor(enabled).toPreferences()));
+            }
+            case (byte) 0xd3: {
+                // Capture Voice During Call
+                LOG.debug("Capture Voice During Call: {}", enabled);
+                return Collections.singletonList(new GBDeviceEventUpdatePreferences()
+                        .withPreferences(new CaptureVoiceDuringCall(enabled).toPreferences()));
+            }
+            default:
+                LOG.warn("Unknown touch sensor subtype {}", String.format("%02x", payload[1]));
+                return Collections.emptyList();
+        }
+    }
+
+    public List<? extends GBDeviceEvent> handleSystemControl(final byte[] payload) {
+        if (payload.length != 4) {
+            LOG.warn("Unexpected system control payload length {}", payload.length);
+            return Collections.emptyList();
+        }
+
+        final byte subcode = payload[2];
+
+        if (subcode == (byte) 0x06) {
+            // Connect Two Devices (dual device mode)
+            final boolean enabled = payload[3] == (byte) 0x01;
+            LOG.debug("Connect Two Devices: {}", enabled);
+            return Collections.singletonList(new GBDeviceEventUpdatePreferences()
+                    .withPreferences(new ConnectTwoDevices(enabled).toPreferences()));
+        }
+
+        LOG.debug("Unhandled system control subcode 0x{}", String.format("%02x", subcode));
+        return Collections.emptyList();
+    }
+
+    public List<? extends GBDeviceEvent> handleServiceLink(final byte[] payload) {
+        if (payload.length != 3) {
+            LOG.warn("Unexpected service link payload length {}", payload.length);
+            return Collections.emptyList();
+        }
+        if (payload[1] != (byte) 0x10) {
+            LOG.warn("Unexpected service link subtype {}", String.format("%02x", payload[1]));
+            return Collections.emptyList();
+        }
+        final boolean enabled = payload[2] == (byte) 0x00;
+        LOG.debug("Service Link: {}", enabled);
+        return Collections.singletonList(new GBDeviceEventUpdatePreferences()
+                .withPreferences(new ServiceLink(enabled).toPreferences()));
+    }
+
+    @Override
+    public List<? extends GBDeviceEvent> handleVoiceNotifications(final byte[] payload) {
+        if (payload.length != 4) {
+            LOG.warn("Unexpected payload length {}", payload.length);
+            return Collections.emptyList();
+        }
+
+        switch (payload[1]) {
+            case 0x01: {
+                // on/off toggle
+                boolean enabled;
+                switch (payload[2]) {
+                    case 0x00: enabled = true; break;
+                    case 0x01: enabled = false; break;
+                    default:
+                        LOG.warn("Unknown voice notifications code {}", String.format("%02x", payload[2]));
+                        return Collections.emptyList();
+                }
+                LOG.debug("Voice Notifications enabled: {}", enabled);
+                return Collections.singletonList(new GBDeviceEventUpdatePreferences()
+                        .withPreference(DeviceSettingsPreferenceConst.PREF_SONY_NOTIFICATION_VOICE_GUIDE, enabled));
+            }
+            case 0x20: {
+                // volume level: signed byte (-2..+2)
+                final int volume = (byte) payload[2];
+                LOG.debug("Voice Notifications volume: {}", volume);
+                // Only update the volume pref, keep toggle state unchanged
+                return Collections.singletonList(new GBDeviceEventUpdatePreferences()
+                        .withPreference(DeviceSettingsPreferenceConst.PREF_SONY_NOTIFICATION_VOICE_GUIDE_VOLUME, volume + 2));
+            }
+            default:
+                LOG.warn("Unknown voice notifications subtype {}", String.format("%02x", payload[1]));
+                return Collections.emptyList();
+        }
+    }
+
+    @Override
+    protected BatteryType decodeBatteryType(final byte b) {
+        switch (b) {
+            case 0x00:
+                return BatteryType.SINGLE;
+            case 0x01:
+                return BatteryType.DUAL2;
+            case 0x09:
+                return BatteryType.DUAL;
+            case 0x0a:
+                return BatteryType.CASE;
+        }
+
+        return null;
+    }
+
+    @Override
+    protected byte encodeBatteryType(final BatteryType batteryType) {
+        switch (batteryType) {
+            case SINGLE:
+                return 0x00;
+            case DUAL2:
+                return 0x01;
+            case DUAL:
+                return 0x09;
+            case CASE:
+                return 0x0a;
+        }
+
+        throw new IllegalArgumentException("Unknown battery type " + batteryType);
+    }
+
+    @Override
+    protected ButtonModes.Mode decodeButtonMode(final byte b) {
+        switch (b) {
+            case (byte) 0xff:
+                return ButtonModes.Mode.OFF;
+            case (byte) 0x00:
+            case (byte) 0x35:  // Seems to be the only one that differs?
+                return ButtonModes.Mode.AMBIENT_SOUND_CONTROL;
+            case (byte) 0x20:
+                return ButtonModes.Mode.PLAYBACK_CONTROL;
+            case (byte) 0x10:
+                return ButtonModes.Mode.VOLUME_CONTROL;
+        }
+
+        return null;
+    }
+
+    @Override
+    protected byte encodeButtonMode(final ButtonModes.Mode buttonMode) {
+        switch (buttonMode) {
+            case OFF:
+                return (byte) 0xff;
+            case AMBIENT_SOUND_CONTROL:
+                return (byte) (supportsWindNoiseCancelling() || supports(SonyHeadphonesCapabilities.NoNoiseCancelling) ? 0x35 : 0x00); // Seems to be the only one that differs?
+            case PLAYBACK_CONTROL:
+                return (byte) 0x20;
+            case VOLUME_CONTROL:
+                return (byte) 0x10;
+        }
+
+        throw new IllegalArgumentException("Unknown button mode " + buttonMode);
+    }
+}

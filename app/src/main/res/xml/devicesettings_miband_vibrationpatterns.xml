@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <PreferenceScreen
+        android:icon="@drawable/ic_vibration"
+        android:key="vibration_patterns_key"
+        android:persistent="false"
+        android:summary="@string/pref_screen_vibration_patterns_summary"
+        android:title="@string/pref_screen_vibration_patterns_title">
+
+        <PreferenceScreen
+            android:icon="@drawable/ic_message_outline"
+            android:key="vibration_profile_key_generic_sms"
+            android:persistent="false"
+            android:title="@string/pref_screen_notification_profile_sms">
+
+            <ListPreference
+                android:defaultValue="@string/p_staccato"
+                android:entries="@array/vibration_profile"
+                android:entryValues="@array/vibration_profile_values"
+                android:key="mi_vibration_profile_generic_sms"
+                android:title="@string/miband_prefs_vibration"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+
+            <EditTextPreference
+                android:defaultValue="3"
+                android:inputType="number"
+                android:key="mi_vibration_count_generic_sms"
+                android:maxLength="1"
+                android:title="@string/pref_title_notifications_repetitions"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+
+            <Preference
+                android:key="mi_try_generic_sms"
+                android:persistent="false"
+                android:title="@string/vibration_try"
+                app:iconSpaceReserved="false" />
+        </PreferenceScreen>
+
+        <PreferenceScreen
+            android:icon="@drawable/ic_phone"
+            android:key="vibration_profile_key_incoming_call"
+            android:persistent="false"
+            android:title="@string/pref_screen_notification_profile_incoming_call">
+
+            <ListPreference
+                android:defaultValue="@string/p_ring"
+                android:entries="@array/vibration_profile"
+                android:entryValues="@array/vibration_profile_values"
+                android:key="mi_vibration_profile_incoming_call"
+                android:title="@string/miband_prefs_vibration"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+
+            <EditTextPreference
+                android:defaultValue="60"
+                android:inputType="number"
+                android:key="mi_vibration_count_incoming_call"
+                android:maxLength="2"
+                android:title="@string/pref_title_notifications_repetitions"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+        </PreferenceScreen>
+
+        <PreferenceScreen
+            android:icon="@drawable/ic_email"
+            android:key="vibration_profile_key_generic_email"
+            android:persistent="false"
+            android:title="@string/pref_screen_notification_profile_email">
+
+            <ListPreference
+                android:defaultValue="@string/p_medium"
+                android:entries="@array/vibration_profile"
+                android:entryValues="@array/vibration_profile_values"
+                android:key="mi_vibration_profile_generic_email"
+                android:title="@string/miband_prefs_vibration"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+
+            <EditTextPreference
+                android:defaultValue="2"
+                android:inputType="number"
+                android:key="mi_vibration_count_generic_email"
+                android:maxLength="1"
+                android:title="@string/pref_title_notifications_repetitions"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+            <Preference
+                android:key="mi_try_generic_email"
+                android:persistent="false"
+                android:title="@string/vibration_try"
+                app:iconSpaceReserved="false" />
+        </PreferenceScreen>
+
+        <PreferenceScreen
+            android:icon="@drawable/ic_message_outline"
+            android:key="vibration_profile_key_generic_chat"
+            android:persistent="false"
+            android:title="@string/pref_screen_notification_profile_generic_chat">
+
+            <ListPreference
+                android:defaultValue="@string/p_waterdrop"
+                android:entries="@array/vibration_profile"
+                android:entryValues="@array/vibration_profile_values"
+                android:key="mi_vibration_profile_generic_chat"
+                android:title="@string/miband_prefs_vibration"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+
+            <EditTextPreference
+                android:defaultValue="3"
+                android:inputType="number"
+                android:key="mi_vibration_count_generic_chat"
+                android:maxLength="1"
+                android:title="@string/pref_title_notifications_repetitions"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+            <Preference
+                android:key="mi_try_generic_chat"
+                android:persistent="false"
+                android:title="@string/vibration_try"
+                app:iconSpaceReserved="false" />
+        </PreferenceScreen>
+
+        <PreferenceScreen
+            android:icon="@drawable/ic_person"
+            android:key="vibration_profile_key_generic_social"
+            android:persistent="false"
+            android:title="@string/pref_screen_notification_profile_generic_social">
+
+            <ListPreference
+                android:defaultValue="@string/p_waterdrop"
+                android:entries="@array/vibration_profile"
+                android:entryValues="@array/vibration_profile_values"
+                android:key="mi_vibration_profile_generic_social"
+                android:title="@string/miband_prefs_vibration"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+
+            <EditTextPreference
+                android:defaultValue="3"
+                android:inputType="number"
+                android:key="mi_vibration_count_generic_social"
+                android:maxLength="1"
+                android:title="@string/pref_title_notifications_repetitions"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+            <Preference
+                android:key="mi_try_generic_social"
+                android:persistent="false"
+                android:title="@string/vibration_try"
+                app:iconSpaceReserved="false" />
+        </PreferenceScreen>
+
+        <PreferenceScreen
+            android:icon="@drawable/ic_access_alarms"
+            android:key="vibration_profile_key_alarm_clock"
+            android:persistent="false"
+            android:title="@string/pref_screen_notification_profile_alarm_clock">
+
+            <ListPreference
+                android:defaultValue="@string/p_alarm_clock"
+                android:entries="@array/vibration_profile"
+                android:entryValues="@array/vibration_profile_values"
+                android:key="mi_vibration_profile_alarm_clock"
+                android:title="@string/miband_prefs_vibration"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+
+            <EditTextPreference
+                android:defaultValue="3"
+                android:inputType="number"
+                android:key="mi_vibration_count_alarm_clock"
+                android:maxLength="2"
+                android:title="@string/pref_title_notifications_repetitions"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+            <Preference
+                android:key="mi_try_generic_alarm_clock"
+                android:persistent="false"
+                android:title="@string/vibration_try"
+                app:iconSpaceReserved="false" />
+        </PreferenceScreen>
+
+        <PreferenceScreen
+            android:icon="@drawable/ic_map"
+            android:key="vibration_profile_key_generic_navigation"
+            android:persistent="false"
+            android:title="@string/pref_screen_notification_profile_generic_navigation">
+
+            <ListPreference
+                android:defaultValue="@string/p_waterdrop"
+                android:entries="@array/vibration_profile"
+                android:entryValues="@array/vibration_profile_values"
+                android:key="mi_vibration_profile_generic_navigation"
+                android:title="@string/miband_prefs_vibration"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+
+            <EditTextPreference
+                android:defaultValue="3"
+                android:inputType="number"
+                android:key="mi_vibration_count_generic_navigation"
+                android:maxLength="1"
+                android:title="@string/pref_title_notifications_repetitions"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+            <Preference
+                android:key="mi_try_generic_navigation"
+                android:persistent="false"
+                android:title="@string/vibration_try"
+                app:iconSpaceReserved="false" />
+        </PreferenceScreen>
+
+        <PreferenceScreen
+            android:icon="@drawable/ic_notifications"
+            android:key="vibration_profile_key_generic"
+            android:persistent="false"
+            android:title="@string/pref_screen_notification_profile_generic">
+
+            <ListPreference
+                android:defaultValue="@string/p_waterdrop"
+                android:entries="@array/vibration_profile"
+                android:entryValues="@array/vibration_profile_values"
+                android:key="mi_vibration_profile_generic"
+                android:title="@string/miband_prefs_vibration"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+
+            <EditTextPreference
+                android:defaultValue="3"
+                android:inputType="number"
+                android:key="mi_vibration_count_generic"
+                android:maxLength="1"
+                android:title="@string/pref_title_notifications_repetitions"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+            <Preference
+                android:key="mi_try_generic"
+                android:persistent="false"
+                android:title="@string/vibration_try"
+                app:iconSpaceReserved="false" />
+        </PreferenceScreen>
+
+    </PreferenceScreen>
+</androidx.preference.PreferenceScreen>

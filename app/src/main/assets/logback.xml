@@ -1,0 +1,19 @@
+<configuration debug="true">
+
+    <appender name="STDOUT" class="ch.qos.logback.classic.android.LogcatAppender">
+        <!-- encoders are  by default assigned the type
+             ch.qos.logback.classic.encoder.PatternLayoutEncoder -->
+        <tagEncoder>
+            <pattern>%logger{80}</pattern>
+        </tagEncoder>
+        <!-- include [%-20thread] to print thread -->
+        <encoder>
+            <pattern>%msg</pattern>
+        </encoder>
+    </appender>
+
+    <root level="DEBUG">
+        <appender-ref ref="STDOUT" />
+        <!-- The FILE appender is added programmatically by nodomain.freeyourgadget.gadgetbridge.Logging -->
+    </root>
+</configuration>

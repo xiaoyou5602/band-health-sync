@@ -1,0 +1,624 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:iconSpaceReserved="false">
+
+    <com.bytehamster.lib.preferencesearch.SearchPreference
+        android:key="searchPreference"
+        app:isPreferenceVisible="false" />
+
+    <PreferenceScreen
+        android:icon="@drawable/ic_settings"
+        android:key="pref_screen_general"
+        android:summary="@string/pref_description_general"
+        android:title="@string/pref_header_general">
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="general_autostartonboot"
+            android:layout="@layout/preference_checkbox"
+            android:title="@string/pref_title_general_autostartonboot"
+            android:icon="@drawable/ic_autoplay" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_shield"
+            android:key="permission_pestering"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/pref_check_permission_status_summary"
+            android:title="@string/pref_check_permission_status" />
+
+        <Preference
+            android:title="@string/pref_check_permission_show_list"
+            android:key="permission_show_activity"
+            android:icon="@drawable/ic_encrypted_add">
+            <intent
+                android:targetPackage="@string/applicationId"
+                android:targetClass="nodomain.freeyourgadget.gadgetbridge.activities.PermissionsActivity" />
+        </Preference>
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="show_changelog"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/pref_show_changelog_summary"
+            android:title="@string/pref_show_changelog"
+            android:icon="@drawable/ic_receipt" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="general_autoconnectonbluetooth"
+            android:layout="@layout/preference_checkbox"
+            android:title="@string/pref_title_general_autoconnectonbluetooth"
+            android:icon="@drawable/ic_bluetooth_searching" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="general_reconnectonlytoconnected"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/pref_summary_general_reconnectonlytoconnected"
+            android:title="@string/pref_title_general_reconnectonlytoconnected"
+            android:icon="@drawable/ic_bluetooth_connected" />
+
+        <PreferenceCategory
+            android:key="language_category"
+            android:title="@string/language_and_region_prefs">
+            <ListPreference
+                android:defaultValue="default"
+                android:entries="@array/pref_language_options"
+                android:entryValues="@array/pref_language_values"
+                android:key="language"
+                android:title="@string/pref_title_language"
+                android:icon="@drawable/ic_translate"
+                app:useSimpleSummaryProvider="true" />
+            <PreferenceScreen
+                android:key="pref_screen_rtl"
+                android:title="@string/preferences_rtl_settings"
+                android:icon="@drawable/ic_format_textdirection_r_to_l">
+                <SwitchPreferenceCompat
+                    android:defaultValue="false"
+                    android:key="rtl"
+                    android:layout="@layout/preference_checkbox"
+                    android:summary="@string/pref_summary_rtl"
+                    android:title="@string/pref_title_rtl"
+                    app:iconSpaceReserved="false" />
+                <SwitchPreferenceCompat
+                    android:defaultValue="false"
+                    android:key="contextualArabic"
+                    android:layout="@layout/preference_checkbox"
+                    android:summary="@string/pref_summary_contextual_arabic"
+                    android:title="@string/pref_title_contextual_arabic"
+                    app:iconSpaceReserved="false" />
+                <EditTextPreference
+                    android:defaultValue="20"
+                    android:inputType="number"
+                    android:key="rtl_max_line_length"
+                    android:maxLength="159"
+                    android:summary="@string/pref_rtl_max_line_length_summary"
+                    android:title="@string/pref_rtl_max_line_length"
+                    app:iconSpaceReserved="false" />
+            </PreferenceScreen>
+        </PreferenceCategory>
+
+        <PreferenceCategory
+            android:key="pref_key_units"
+            android:title="@string/pref_title_unit_system">
+            <ListPreference
+                android:defaultValue="metric"
+                android:entries="@array/pref_entries_unit_system"
+                android:entryValues="@array/pref_values_unit_system"
+                android:key="unit_distance"
+                android:title="@string/pref_title_unit_distance"
+                android:icon="@drawable/ic_straighten"
+                app:useSimpleSummaryProvider="true" />
+            <ListPreference
+                android:defaultValue="metric"
+                android:entries="@array/temperature_scales"
+                android:entryValues="@array/temperature_scales_values"
+                android:key="unit_temperature"
+                android:title="@string/pref_title_unit_temperature"
+                android:icon="@drawable/ic_temperature"
+                app:useSimpleSummaryProvider="true" />
+            <ListPreference
+                android:defaultValue="metric"
+                android:entries="@array/weight_scale_units"
+                android:entryValues="@array/weight_scale_values"
+                android:key="unit_weight"
+                android:title="@string/pref_title_unit_weight"
+                android:icon="@drawable/ic_weight"
+                app:useSimpleSummaryProvider="true" />
+            <SwitchPreferenceCompat
+                android:defaultValue="true"
+                android:key="units_nautical"
+                android:layout="@layout/preference_checkbox"
+                android:summary="@string/pref_summary_nautical_units"
+                android:icon="@drawable/ic_sailing"
+                android:title="@string/pref_title_nautical_units" />
+        </PreferenceCategory>
+
+        <PreferenceCategory
+            android:key="pref_key_datetime"
+            android:title="@string/pref_header_datetime">
+            <SwitchPreferenceCompat
+                android:defaultValue="true"
+                android:key="datetime_synconconnect"
+                android:layout="@layout/preference_checkbox"
+                android:summary="@string/pref_summary_datetime_syctimeonconnect"
+                android:title="@string/pref_title_datetime_syctimeonconnect"
+                android:icon="@drawable/ic_update" />
+        </PreferenceCategory>
+
+        <PreferenceCategory
+            android:title="@string/pref_header_location">
+            <Preference
+                android:key="location_aquire"
+                android:title="@string/pref_title_location_aquire"
+                android:icon="@drawable/ic_gps_location" />
+            <EditTextPreference
+                android:defaultValue="0"
+                android:inputType="numberDecimal|numberSigned"
+                android:key="location_latitude"
+                android:maxLength="7"
+                android:title="@string/pref_title_location_latitude"
+                android:icon="@drawable/ic_swap_vert"
+                app:useSimpleSummaryProvider="true" />
+            <EditTextPreference
+                android:defaultValue="0"
+                android:inputType="numberDecimal|numberSigned"
+                android:key="location_longitude"
+                android:maxLength="7"
+                android:title="@string/pref_title_location_longitude"
+                android:icon="@drawable/ic_swap_horiz"
+                app:useSimpleSummaryProvider="true" />
+            <SwitchPreferenceCompat
+                android:defaultValue="true"
+                android:dependency="location_aquire"
+                android:key="use_updated_location_if_available"
+                android:layout="@layout/preference_checkbox"
+                android:summary="@string/pref_summary_location_keep_uptodate"
+                android:title="@string/pref_title_location_keep_uptodate"
+                android:icon="@drawable/ic_move" />
+        </PreferenceCategory>
+    </PreferenceScreen>
+
+    <Preference
+        android:icon="@drawable/ic_person"
+        android:key="pref_category_activity_personal"
+        android:summary="@string/pref_description_about_you"
+        android:title="@string/activity_prefs_about_you"
+        app:iconSpaceReserved="false" />
+
+    <Preference
+        android:icon="@drawable/ic_notifications"
+        android:key="pref_category_notifications"
+        android:summary="@string/pref_description_notifications"
+        android:title="@string/pref_header_notifications"
+        app:iconSpaceReserved="false" />
+
+    <PreferenceScreen
+        android:icon="@drawable/ic_paint"
+        android:key="pref_screen_user_interface"
+        android:summary="@string/pref_description_user_interface"
+        android:title="@string/pref_title_user_interface">
+
+        <PreferenceCategory
+            android:key="pref_theme_dynamic_colors_explanation"
+            android:title="@string/pref_theme_dynamic_colors_explanation"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+        <ListPreference
+            android:defaultValue="@string/pref_theme_value_light"
+            android:entries="@array/pref_theme_options"
+            android:entryValues="@array/pref_theme_values"
+            android:icon="@drawable/ic_contrast"
+            android:key="pref_key_theme"
+            android:title="@string/pref_title_theme"
+            app:useSimpleSummaryProvider="true" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_dark_mode"
+            android:key="pref_key_theme_amoled_black"
+            android:layout="@layout/preference_checkbox"
+            android:title="@string/pref_theme_black_background" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:icon="@drawable/ic_visibility_lock"
+            android:key="block_screenshots"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/pref_summary_block_screenshots"
+            android:title="@string/pref_title_block_screenshot" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:icon="@drawable/ic_swipe_down"
+            android:key="pref_refresh_on_swipe"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/pref_refresh_on_swipe_summary"
+            android:title="@string/pref_refresh_on_swipe_title" />
+
+        <PreferenceCategory
+            android:key="pref_screen_theme"
+            android:title="@string/pref_header_main_screen"
+            app:iconSpaceReserved="true">
+
+            <SwitchPreferenceCompat
+                android:defaultValue="true"
+                android:icon="@drawable/ic_add"
+                android:key="display_add_device_fab"
+                android:layout="@layout/preference_checkbox"
+                android:summaryOff="@string/pref_display_add_device_fab_off"
+                android:summaryOn="@string/pref_display_add_device_fab_on"
+                android:title="@string/pref_display_add_device_fab" />
+
+            <SwitchPreferenceCompat
+                android:defaultValue="true"
+                android:icon="@drawable/ic_bottom_navigation"
+                android:key="display_bottom_navigation_bar"
+                android:layout="@layout/preference_checkbox"
+                android:summaryOff="@string/pref_summary_bottom_navigation_bar_off"
+                android:summaryOn="@string/pref_summary_bottom_navigation_bar_on"
+                android:title="@string/pref_title_bottom_navigation_bar" />
+        </PreferenceCategory>
+    </PreferenceScreen>
+
+    <Preference
+        android:icon="@drawable/ic_dashboard"
+        android:key="pref_category_dashboard"
+        android:summary="@string/pref_description_dashboard"
+        android:title="@string/bottom_nav_dashboard"
+        app:iconSpaceReserved="false" />
+
+    <Preference
+        android:icon="@drawable/ic_show_chart"
+        android:key="pref_charts"
+        android:title="@string/activity_prefs_charts"
+        app:iconSpaceReserved="false" />
+
+    <Preference
+        android:icon="@drawable/ic_map"
+        android:key="pref_category_maps"
+        android:title="@string/maps"
+        app:iconSpaceReserved="false" />
+
+    <Preference
+        android:icon="@drawable/ic_auto_awesome"
+        android:key="pref_screen_automations"
+        android:summary="@string/pref_description_automations"
+        android:title="@string/pref_header_automations" />
+
+    <Preference
+        android:icon="@drawable/ic_settings_remote"
+        android:key="pref_screen_quick_settings"
+        android:summary="@string/pref_summary_quick_settings"
+        android:title="@string/pref_header_quick_settings"
+        app:iconSpaceReserved="false" />
+
+    <PreferenceScreen
+        android:icon="@drawable/ic_extension"
+        android:key="pref_screen_external_integrations"
+        android:title="@string/pref_header_external_integrations">
+
+        <PreferenceScreen
+            android:icon="@drawable/ic_navigation"
+            android:key="navigation_settings"
+            android:summary="@string/pref_title_navigation_forward"
+            android:title="@string/pref_title_nagivation_apps"
+            app:iconSpaceReserved="false">
+
+            <Preference
+                android:icon="@drawable/ic_warning_gray"
+                android:key="maps_warning_supported_devices"
+                android:persistent="false"
+                android:summary="@string/pref_summary_supported_devices"
+                android:title="@string/pref_title_supported_devices">
+                <intent
+                    android:action="android.intent.action.VIEW"
+                    android:data="https://gadgetbridge.org/basics/features/navigation/#supported-devices" />
+            </Preference>
+
+            <SwitchPreferenceCompat
+                android:defaultValue="true"
+                android:key="navigation_forward"
+                android:layout="@layout/preference_checkbox"
+                android:summary="@string/pref_summary_navigation_forward"
+                android:title="@string/pref_title_navigation_forward"
+                app:iconSpaceReserved="false" />
+            <SwitchPreferenceCompat
+                android:defaultValue="true"
+                android:dependency="navigation_forward"
+                android:key="nagivation_screen_on"
+                android:layout="@layout/preference_checkbox"
+                android:title="@string/pref_title_whenscreenon"
+                app:iconSpaceReserved="false" />
+            <ListPreference
+                android:defaultValue="autodetect"
+                android:entries="@array/osmand_package_names"
+                android:entryValues="@array/osmand_package_names_values"
+                android:key="pref_key_osmand_packagename"
+                android:summary="@string/pref_summary_osmand_packagename"
+                android:title="@string/pref_title_osmand_packagename"
+                app:iconSpaceReserved="false" />
+            <PreferenceCategory
+                android:key="navigation_apps_selection"
+                android:title="@string/pref_title_navigation_apps"
+                app:iconSpaceReserved="false">
+                <SwitchPreferenceCompat
+                    android:defaultValue="true"
+                    android:key="navigation_app_osmand"
+                    android:layout="@layout/preference_checkbox"
+                    android:title="@string/pref_navigation_app_osmand"
+                    app:iconSpaceReserved="false" />
+                <SwitchPreferenceCompat
+                    android:defaultValue="true"
+                    android:key="navigation_app_gmaps"
+                    android:layout="@layout/preference_checkbox"
+                    android:title="@string/pref_navigation_app_gmaps"
+                    app:iconSpaceReserved="false" />
+            </PreferenceCategory>
+        </PreferenceScreen>
+
+        <Preference
+            android:icon="@drawable/ic_deployed_code"
+            android:key="pref_key_opentracks_packagename"
+            android:summary="@string/pref_summary_opentracks_packagename"
+            android:title="@string/pref_title_opentracks_packagename" />
+
+        <Preference
+            android:icon="@drawable/ic_activity_sleep"
+            android:key="pref_category_sleepasandroid"
+            android:title="@string/sleepasandroid_settings" />
+
+        <Preference
+            android:icon="@drawable/ic_heart"
+            android:key="pref_category_healthconnect"
+            android:title="@string/healthconnect_settings" />
+
+        <Preference
+            android:icon="@drawable/ic_arrow_upload_progress"
+            android:key="pref_category_selfhosted_health"
+            android:summary="@string/selfhosted_health_settings_summary"
+            android:title="@string/selfhosted_health_settings" />
+
+        <PreferenceScreen
+            android:icon="@drawable/ic_partly_cloudy_day"
+            android:key="pref_screen_weather"
+            android:summary="@string/pref_title_weather_summary"
+            android:title="@string/pref_title_weather">
+
+            <EditTextPreference
+                android:inputType="text"
+                android:key="weather_city"
+                android:title="@string/pref_title_weather_location"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+        </PreferenceScreen>
+
+        <PreferenceScreen
+            android:icon="@drawable/ic_language"
+            android:key="pref_category_internethelper"
+            android:title="@string/prefs_internet_helper_title"
+            android:summary="@string/prefs_internet_helper_summary" />
+
+        <PreferenceScreen
+            android:icon="@drawable/ic_shoe"
+            android:key="pref_category_online_fitness_trackers"
+            android:title="@string/prefs_online_fitness_trackers_title"
+            android:summary="@string/prefs_online_fitness_trackers_summary" />
+    </PreferenceScreen>
+
+    <Preference
+        android:icon="@drawable/ic_bluetooth_searching"
+        android:key="pref_discovery_pairing"
+        android:title="@string/activity_prefs_discovery_pairing"
+        app:iconSpaceReserved="false" />
+
+    <PreferenceScreen
+        android:icon="@drawable/ic_developer_mode"
+        android:key="pref_key_development"
+        android:summary="@string/pref_description_developer_options"
+        android:title="@string/pref_header_development">
+
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="log_to_file"
+            android:layout="@layout/preference_checkbox"
+            android:title="@string/pref_write_logfiles"
+            app:iconSpaceReserved="false" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="log_level_trace"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/pref_log_level_trace_summary"
+            android:title="@string/pref_log_level_trace_title"
+            app:iconSpaceReserved="false" />
+        <Preference
+            android:key="log_restart"
+            android:summary="@string/pref_restart_logging_summary"
+            android:title="@string/pref_restart_logging_title"
+            app:iconSpaceReserved="false"
+            app:isPreferenceVisible="false" />
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="crash_notification"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/pref_crash_notification_summary"
+            android:title="@string/pref_crash_notification_title"
+            app:iconSpaceReserved="false" />
+
+        <PreferenceScreen
+            android:key="pref_screen_intent_api"
+            android:title="@string/pref_header_intent_api"
+            app:iconSpaceReserved="false">
+
+            <PreferenceCategory
+                android:key="pref_header_bluetooth"
+                android:title="@string/menuitem_bluetooth"
+                app:iconSpaceReserved="false">
+
+                <SwitchPreferenceCompat
+                    android:key="prefs_key_allow_bluetooth_intent_api"
+                    android:layout="@layout/preference_checkbox"
+                    android:summary="@string/activity_prefs_summary_allow_bluetooth_intent_api"
+                    android:title="@string/activity_prefs_allow_bluetooth_intent_api"
+                    app:iconSpaceReserved="false" />
+            </PreferenceCategory>
+
+            <PreferenceCategory
+                android:key="pref_header_activity_sync"
+                android:title="@string/intent_activity_sync_title"
+                app:iconSpaceReserved="false">
+
+                <SwitchPreferenceCompat
+                    android:key="intent_api_allow_activity_sync"
+                    android:layout="@layout/preference_checkbox"
+                    android:summary="@string/intent_api_allow_activity_sync_summary"
+                    android:title="@string/intent_api_allow_activity_sync_title"
+                    app:iconSpaceReserved="false" />
+
+                <SwitchPreferenceCompat
+                    android:key="intent_api_broadcast_activity_sync"
+                    android:layout="@layout/preference_checkbox"
+                    android:summary="@string/intent_api_broadcast_activity_sync_summary"
+                    android:title="@string/intent_api_broadcast_activity_sync_title"
+                    app:iconSpaceReserved="false" />
+            </PreferenceCategory>
+
+            <PreferenceCategory
+                android:key="pref_header_auto_export_db"
+                android:title="@string/pref_header_auto_export_db"
+                app:iconSpaceReserved="false">
+
+                <SwitchPreferenceCompat
+                    android:key="intent_api_allow_trigger_export"
+                    android:layout="@layout/preference_checkbox"
+                    android:summary="@string/intent_api_allow_trigger_export_summary"
+                    android:title="@string/intent_api_allow_trigger_export_title"
+                    app:iconSpaceReserved="false" />
+
+                <SwitchPreferenceCompat
+                    android:key="intent_api_broadcast_export"
+                    android:layout="@layout/preference_checkbox"
+                    android:summary="@string/intent_api_broadcast_export_summary"
+                    android:title="@string/intent_api_broadcast_export_title"
+                    app:iconSpaceReserved="false" />
+            </PreferenceCategory>
+
+            <PreferenceCategory
+                android:key="pref_header_auto_export_zip"
+                android:title="@string/pref_header_auto_export_zip"
+                app:iconSpaceReserved="false">
+
+                <SwitchPreferenceCompat
+                    android:key="intent_api_allow_trigger_zip_export"
+                    android:layout="@layout/preference_checkbox"
+                    android:summary="@string/intent_api_allow_trigger_zip_export_summary"
+                    android:title="@string/intent_api_allow_trigger_zip_export_title"
+                    app:iconSpaceReserved="false" />
+
+                <SwitchPreferenceCompat
+                    android:key="intent_api_broadcast_zip_export"
+                    android:layout="@layout/preference_checkbox"
+                    android:summary="@string/intent_api_broadcast_zip_export_summary"
+                    android:title="@string/intent_api_broadcast_zip_export_title"
+                    app:iconSpaceReserved="false" />
+            </PreferenceCategory>
+
+            <PreferenceCategory
+                android:key="pref_header_intent_global_settings"
+                android:title="@string/action_settings"
+                app:iconSpaceReserved="false">
+
+                <SwitchPreferenceCompat
+                    android:key="intent_api_allow_global_settings"
+                    android:layout="@layout/preference_checkbox"
+                    android:summary="@string/intent_api_allow_global_settings_summary"
+                    android:title="@string/pref_title_third_party_app_device_settings"
+                    app:iconSpaceReserved="false" />
+            </PreferenceCategory>
+
+            <PreferenceCategory
+                android:key="pref_header_debug"
+                android:title="@string/action_debug"
+                app:iconSpaceReserved="false">
+
+                <SwitchPreferenceCompat
+                    android:key="intent_api_allow_debug_commands"
+                    android:layout="@layout/preference_checkbox"
+                    android:summary="@string/intent_api_allow_debug_commands_summary"
+                    android:title="@string/intent_api_allow_debug_commands_title"
+                    app:iconSpaceReserved="false" />
+            </PreferenceCategory>
+        </PreferenceScreen>
+
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="experimental_settings"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/pref_experimental_settings_summary"
+            android:title="@string/pref_experimental_settings_title"
+            app:iconSpaceReserved="false" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="experimental_metrics"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/pref_experimental_metrics_summary"
+            android:title="@string/pref_experimental_metrics_title"
+            app:iconSpaceReserved="false" />
+    </PreferenceScreen>
+
+    <PreferenceScreen
+        android:icon="@drawable/ic_report"
+        android:key="pref_screen_deprecated_functionalities"
+        android:summary="@string/pref_description_deprecated_functionalities"
+        android:title="@string/pref_header_deprecated_functionalities"
+        app:iconSpaceReserved="false">
+
+        <PreferenceCategory
+            android:key="pref_key_deprecated_functionalities"
+            android:title="@string/pref_header_deprecated_functionalities_warning"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false" />
+
+        <SwitchPreferenceCompat
+            android:key="prefs_key_enable_deprecated_notificationcollectormonitor"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/prefs_key_enable_deprecated_notificationcollectormonitor_summary"
+            android:title="@string/prefs_key_enable_deprecated_notificationcollectormonitor_title"
+            app:iconSpaceReserved="false" />
+
+        <PreferenceCategory
+            android:key="pref_header_media_control"
+            android:title="@string/pref_deprecated_media_control_title"
+            app:iconSpaceReserved="false"
+            app:singleLineTitle="false">
+
+            <SwitchPreferenceCompat
+                android:defaultValue="false"
+                android:key="pref_deprecated_media_control"
+                android:layout="@layout/preference_checkbox"
+                android:summary="@string/pref_deprecated_media_control_summary"
+                android:title="@string/pref_deprecated_media_control_title"
+                app:iconSpaceReserved="false" />
+
+            <SwitchPreferenceCompat
+                android:defaultValue="false"
+                android:dependency="pref_deprecated_media_control"
+                android:key="mb_intents"
+                android:layout="@layout/preference_checkbox"
+                android:summary="@string/pref_summary_mb_intents"
+                android:title="@string/pref_title_mb_intents"
+                app:iconSpaceReserved="false" />
+
+            <ListPreference
+                android:defaultValue="default"
+                android:dependency="mb_intents"
+                android:key="audio_player"
+                android:title="@string/pref_title_audio_player"
+                app:iconSpaceReserved="false"
+                app:useSimpleSummaryProvider="true" />
+        </PreferenceCategory>
+    </PreferenceScreen>
+</PreferenceScreen>

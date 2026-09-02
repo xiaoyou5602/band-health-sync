@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <EditTextPreference
+        android:icon="@drawable/ic_detector_status"
+        android:title="@string/devicesetting_scannable_debounce"
+        android:summary="@string/devicesetting_scannable_debounce_summary"
+        android:key="devicesetting_scannable_debounce"
+        android:defaultValue="60"
+        android:inputType="number" />
+
+    <EditTextPreference
+        android:icon="@drawable/ic_detector_offline"
+        android:title="@string/devicesetting_scannable_minimum_unseen"
+        android:summary="@string/devicesetting_scannable_minimum_unseen_summary"
+        android:key="devicesetting_scannable_unseen"
+        android:defaultValue="0"
+        android:inputType="number" />
+
+    <EditTextPreference
+        android:icon="@drawable/ic_signal_cellular_1_bar"
+        android:title="@string/devicesetting_scannable_rssi"
+        android:summary="@string/devicesetting_scannable_rssi_summary"
+        android:key="devicesetting_scannable_rssi"
+        android:defaultValue="-100"
+        android:min="-100"
+        android:max="0"
+        android:inputType="number" />
+
+</PreferenceScreen>

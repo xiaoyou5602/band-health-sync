@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+<!--    <PreferenceCategory android:title="@string/pref_header_display">-->
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:disableDependentsState="true"
+        android:icon="@drawable/ic_wb_sunny"
+        android:key="screen_auto_brightness"
+        android:layout="@layout/preference_checkbox"
+        android:summary="@string/pref_screen_auto_brightness_summary"
+        android:title="@string/pref_screen_auto_brightness_title" />
+    <SeekBarPreference
+        android:key="screen_brightness"
+        android:dependency="screen_auto_brightness"
+        android:defaultValue="42"
+        android:max="42"
+        android:icon="@drawable/ic_wb_sunny"
+        android:title="@string/pref_screen_brightness" />
+    <SeekBarPreference
+        android:icon="@drawable/ic_arrows_up_down"
+        android:key="pref_even_realities_g1_screen_height"
+        android:max="9"
+        android:min="1"
+        app:min="1"
+        android:defaultValue="1"
+        android:summary="@string/pref_even_realities_g1_screen_location_summary"
+        android:title="@string/pref_even_realities_g1_screen_location_title"
+        app:showSeekBarValue="true" />
+    <SeekBarPreference
+        android:icon="@drawable/ic_arrow_depth"
+        android:key="pref_even_realities_g1_screen_depth"
+        android:max="9"
+        android:min="1"
+        app:min="1"
+        android:defaultValue="1"
+        android:summary="@string/pref_even_realities_g1_screen_depth_summary"
+        android:title="@string/pref_even_realities_g1_screen_depth_title"
+        app:showSeekBarValue="true" />
+    <!--    </PreferenceCategory>-->
+</PreferenceScreen>

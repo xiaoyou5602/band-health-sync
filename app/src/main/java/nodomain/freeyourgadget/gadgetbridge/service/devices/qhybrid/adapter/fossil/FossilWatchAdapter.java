@@ -1,0 +1,1046 @@
+/* Copyright (C) 2019-2024 Andreas Shimokawa, Arjan Schrijver, Carsten
+    Pfeiffer, Daniel Dakhno, Hasan Ammar, Petr Vaněk
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.adapter.fossil;
+
+import static nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.QHybridSupport.ITEM_TIMEZONE_OFFSET;
+import static nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.QHybridSupport.QHYBRID_EVENT_BUTTON_PRESS;
+import static nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.QHybridSupport.QHYBRID_EVENT_MULTI_BUTTON_PRESS;
+
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.widget.Toast;
+
+import androidx.annotation.Nullable;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.text.DateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.TimeZone;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
+
+import nodomain.freeyourgadget.gadgetbridge.BuildConfig;
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSettingsPreferenceConst;
+import nodomain.freeyourgadget.gadgetbridge.database.DBHandler;
+import nodomain.freeyourgadget.gadgetbridge.database.DBHelper;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventFindPhone;
+import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventMusicControl;
+import nodomain.freeyourgadget.gadgetbridge.devices.qhybrid.HybridHRActivitySampleProvider;
+import nodomain.freeyourgadget.gadgetbridge.devices.qhybrid.NotificationConfiguration;
+import nodomain.freeyourgadget.gadgetbridge.devices.qhybrid.PackageConfigHelper;
+import nodomain.freeyourgadget.gadgetbridge.devices.qhybrid.QHybridCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.entities.HybridHRActivitySample;
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivityUser;
+import nodomain.freeyourgadget.gadgetbridge.model.Alarm;
+import nodomain.freeyourgadget.gadgetbridge.model.CallSpec;
+import nodomain.freeyourgadget.gadgetbridge.model.GenericItem;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.QHybridSupport;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.adapter.WatchAdapter;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.buttonconfig.ConfigFileBuilder;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.buttonconfig.ConfigPayload;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.file.FileHandle;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.parser.ActivityEntry;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.parser.ActivityFileParser;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.Request;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.FossilRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.RequestMtuRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.SetDeviceStateRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.alarm.AlarmsSetRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.configuration.ConfigurationPutRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.device_info.DeviceInfo;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.device_info.DeviceSecurityVersionInfo;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.device_info.GetDeviceInfoRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.device_info.SupportedFileVersionsInfo;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.file.FileDeleteRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.file.FileLookupAndGetRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.file.FilePutRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.file.FirmwareFilePutRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.notification.NotificationFilterPutRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.notification.PlayTextNotificationRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil_hr.music.MusicControlRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.misfit.AnimationRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.misfit.MoveHandsRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.misfit.ReleaseHandsControlRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.misfit.RequestHandControlRequest;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.misfit.SaveCalibrationRequest;
+import nodomain.freeyourgadget.gadgetbridge.util.AlarmUtils;
+import nodomain.freeyourgadget.gadgetbridge.util.FileUtils;
+import nodomain.freeyourgadget.gadgetbridge.util.GB;
+import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
+import nodomain.freeyourgadget.gadgetbridge.util.UriHelper;
+
+public class FossilWatchAdapter extends WatchAdapter {
+    private static final AtomicLong THREAD_COUNTER = new AtomicLong(0L);
+
+    private ArrayList<Request> requestQueue = new ArrayList<>();
+
+    protected FossilRequest fossilRequest;
+
+    private int MTU = 23;
+
+    private final String ITEM_MTU = "MTU: ";
+
+    private final String CONFIG_ITEM_VIBRATION_STRENGTH = "vibration_strength";
+    private final String CONFIG_ITEM_TIMEZONE_OFFSET = "timezone_offset";
+
+    private int lastButtonIndex = -1;
+    protected boolean saveRawActivityFiles = false;
+    private boolean findPhoneActive = false;
+
+    protected final Logger LOG = LoggerFactory.getLogger(getClass().getSimpleName());
+
+    SupportedFileVersionsInfo supportedFileVersions;
+
+    public FossilWatchAdapter(QHybridSupport deviceSupport) {
+        super(deviceSupport);
+    }
+
+    private final int REQUEST_TIMEOUT = 5 * 60 * 1000;
+
+    private Looper timeoutLooper = null;
+    private Handler timeoutHandler;
+    protected Thread timeoutThread = new Thread(new Runnable() {
+        @Override
+        public void run() {
+            Looper.prepare();
+            timeoutLooper = Looper.myLooper();
+            timeoutHandler = new Handler(timeoutLooper);
+            Looper.loop();
+        }
+    }, "FossilWatchAdapter_" + THREAD_COUNTER.getAndIncrement());
+
+    private Runnable requestTimeoutRunnable = new Runnable() {
+        @Override
+        public void run() {
+            String requestName = "unknown";
+            if(fossilRequest != null){
+                requestName = fossilRequest.getName();
+            }
+            log(String.format("Request %s timed out, queing next request", requestName));
+            fossilRequest = null;
+            queueNextRequest();
+        }
+    };
+
+    @Override
+    public void initialize() {
+        timeoutThread.start();
+
+        saveRawActivityFiles = getDeviceSpecificPreferences().getBoolean("save_raw_activity_files", false);
+
+        playPairingAnimation();
+
+        queueWrite(new RequestMtuRequest(512), false);
+
+        getDeviceInfos();
+    }
+
+    @Override
+    public void dispose() {
+        if (timeoutLooper != null) {
+            timeoutHandler.removeCallbacks(requestTimeoutRunnable);
+            timeoutLooper.quit();
+        }
+
+        super.dispose();
+    }
+
+    private void restartRequestTimeout(){
+        if(timeoutLooper == null){
+            return;
+        }
+        stopRequestTimeout();
+        log("restarting request timeout");
+        timeoutHandler.postDelayed(
+                requestTimeoutRunnable,
+                REQUEST_TIMEOUT
+        );
+    }
+
+    private void stopRequestTimeout(){
+        if(timeoutLooper == null){
+            return;
+        }
+        timeoutHandler.removeCallbacks(requestTimeoutRunnable);
+        log("stopped request timeout");
+    }
+
+    public short getSupportedFileVersion(FileHandle handle) {
+        return this.supportedFileVersions.getSupportedFileVersion(handle);
+    }
+
+    protected void initializeWithSupportedFileVersions() {
+        syncConfiguration();
+
+        syncNotificationSettings();
+
+        syncButtonSettings();
+
+        queueWrite(new SetDeviceStateRequest(GBDevice.State.INITIALIZED), false);
+    }
+
+    protected void getDeviceInfos() {
+        queueWrite(new GetDeviceInfoRequest(this) {
+            @Override
+            public void handleDeviceInfos(DeviceInfo[] deviceInfos) {
+                for (DeviceInfo info : deviceInfos) {
+                    if (info instanceof SupportedFileVersionsInfo) {
+                        FossilWatchAdapter.this.supportedFileVersions = (SupportedFileVersionsInfo) info;
+                    } else if (info instanceof DeviceSecurityVersionInfo) {
+                        getDeviceSupport().getDevice().addDeviceInfo(new GenericItem("DEVICE_SECURITY_VERSION", info.toString()));
+                    }
+                }
+                initializeWithSupportedFileVersions();
+            }
+        });
+    }
+
+    private void syncButtonSettings() {
+        overwriteButtons(null);
+    }
+
+    @Override
+    public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+        if (status != BluetoothGatt.GATT_SUCCESS) {
+            if (characteristic.getUuid().toString().equals("3dda0005-957f-7d4a-34a6-74696673696d")) {
+                LOG.error("authentication failed");
+                setDeviceState(GBDevice.State.AUTHENTICATION_REQUIRED);
+                requestQueue.clear();
+            }
+            log("characteristic write failed: " + status);
+            if (BuildConfig.DEBUG) {
+                // ADDED NULL CHECK: Prevents crash if the failure came from a raw direct BLE write
+                String requestName = (fossilRequest != null) ? fossilRequest.getName() : "Raw BLE Write";
+                GB.toast(requestName + " characteristic write failed: " + status, Toast.LENGTH_SHORT, GB.ERROR);
+            }
+            fossilRequest = null;
+
+            queueNextRequest();
+        }
+    }
+
+    @Override
+    public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+        log("status " + status + " newState: " + newState);
+        if (newState != BluetoothGatt.STATE_CONNECTED) {
+            log("status " + newState + "  clearing queue...");
+            requestQueue.clear();
+            fossilRequest = null;
+        }
+    }
+
+    protected SharedPreferences getDeviceSpecificPreferences() {
+        return GBApplication.getDeviceSpecificSharedPrefs(
+                getDeviceSupport().getDevice().getAddress()
+        );
+    }
+
+    private void syncConfiguration() {
+        SharedPreferences preferences = getDeviceSpecificPreferences();
+
+        int stepGoal = new ActivityUser().getStepsGoal();
+        if (preferences.getBoolean("use_activity_hand_as_notification_counter", false)) {
+            stepGoal = 1000000;
+        }
+
+        byte vibrationStrength = (byte) preferences.getInt(CONFIG_ITEM_VIBRATION_STRENGTH, 100);
+        int timezoneOffset = preferences.getInt(CONFIG_ITEM_TIMEZONE_OFFSET, 0);
+
+        GBDevice device = getDeviceSupport().getDevice();
+
+        device.addDeviceInfo(new GenericItem(ITEM_TIMEZONE_OFFSET, String.valueOf(timezoneOffset)));
+
+        queueWrite(new ConfigurationPutRequest(new ConfigurationPutRequest.ConfigItem[]{
+                new ConfigurationPutRequest.DailyStepGoalConfigItem(stepGoal),
+                new ConfigurationPutRequest.VibrationStrengthConfigItem(vibrationStrength),
+                new ConfigurationPutRequest.TimezoneOffsetConfigItem((short) timezoneOffset)
+        }, this));
+
+        setTime();
+    }
+
+    public int getMTU() {
+        if (this.MTU < 0) throw new RuntimeException("MTU not configured");
+
+        return this.MTU;
+    }
+
+    @Override
+    public void playPairingAnimation() {
+        queueWrite(new AnimationRequest(), false);
+    }
+
+    @Override
+    public void playNotification(NotificationConfiguration config) {
+        if (config.getPackageName() == null) {
+            log("package name in notification not set");
+            return;
+        }
+        queueWrite(new PlayTextNotificationRequest(config.getPackageName(), this), false);
+    }
+
+    private void vibrateStartCall() {
+        try {
+            getDeviceSupport().createTransactionBuilder("vibrate call")
+                    .write(
+                            UUID.fromString("3dda0005-957f-7d4a-34a6-74696673696d"),
+                            (byte) 0x01, (byte) 0x04, (byte) 0x30, (byte) 0x75, (byte) 0x00, (byte) 0x00)
+                    .queue();
+        } catch (Exception e) {
+            LOG.error("Error triggering call vibration", e);
+        }
+    }
+
+    private void vibrateEndCall() {
+        try {
+            getDeviceSupport().createTransactionBuilder("stop call vibration")
+                    .write(
+                            UUID.fromString("3dda0005-957f-7d4a-34a6-74696673696d"),
+                            (byte) 0x02, (byte) 0x05, (byte) 0x04)
+                    .queue();
+        } catch (Exception e) {
+            LOG.error("Error stopping call vibration", e);
+        }
+    }
+
+    @Override
+    public void onSetCallState(CallSpec callSpec) {
+        if (callSpec.command == CallSpec.CALL_INCOMING) {
+            LOG.info("Incoming call, triggering vibration on watch");
+            vibrateStartCall();
+        } else {
+            LOG.info("Call ended, stopping vibration on watch");
+            vibrateEndCall();
+        }
+    }
+
+    @Override
+    public void setTime() {
+        queueWrite(
+                new ConfigurationPutRequest(generateTimeConfigItemNow(), this), false
+        );
+    }
+
+    protected ConfigurationPutRequest.TimeConfigItem generateTimeConfigItemNow() {
+        long millis = System.currentTimeMillis();
+        TimeZone zone = new GregorianCalendar().getTimeZone();
+
+        return new ConfigurationPutRequest.TimeConfigItem(
+                (int) (millis / 1000 + getDeviceSupport().getTimeOffset() * 60),
+                (short) (millis % 1000),
+                (short) (zone.getOffset(millis) / 60000)
+        );
+    }
+
+    @Override
+    public void overwriteButtons(String jsonConfigString) {
+        try {
+            String upperButtonFunction = getDeviceSpecificPreferences().getString("top_button_function", "");
+            String middleButtonFunction = getDeviceSpecificPreferences().getString("middle_button_function", "");
+            String bottomButtonFunction = getDeviceSpecificPreferences().getString("bottom_button_function", "");
+            JSONArray buttonConfigJson = new JSONArray();
+            if (upperButtonFunction.isEmpty() && middleButtonFunction.isEmpty() && bottomButtonFunction.isEmpty()) {
+                // Migrate old type button settings
+                String buttonConfig = getDeviceSpecificPreferences().getString("buttons", null);
+                if (buttonConfig != null) {
+                    JSONArray parsedConfig = new JSONArray(buttonConfig);
+                    if (parsedConfig.length() >= 3) {
+                        LOG.info("Found unmigrated button preferences, migrating now.");
+                        upperButtonFunction = parsedConfig.getString(0);
+                        middleButtonFunction = parsedConfig.getString(1);
+                        bottomButtonFunction = parsedConfig.getString(2);
+                        getDeviceSpecificPreferences()
+                                .edit()
+                                .putString("top_button_function", upperButtonFunction)
+                                .putString("middle_button_function", middleButtonFunction)
+                                .putString("bottom_button_function", bottomButtonFunction)
+                                .apply();
+                    }
+                }
+            }
+            buttonConfigJson.put(upperButtonFunction);
+            buttonConfigJson.put(middleButtonFunction);
+            buttonConfigJson.put(bottomButtonFunction);
+            LOG.info("overwriteButtons: " + buttonConfigJson);
+
+            ConfigPayload[] payloads = new ConfigPayload[buttonConfigJson.length()];
+            for (int i = 0; i < buttonConfigJson.length(); i++) {
+                try {
+                    payloads[i] = ConfigPayload.valueOf(buttonConfigJson.getString(i));
+                } catch (IllegalArgumentException e) {
+                    payloads[i] = ConfigPayload.FORWARD_TO_PHONE;
+                }
+            }
+
+            ConfigFileBuilder builder = new ConfigFileBuilder(payloads);
+
+            FilePutRequest fileUploadRequest = new FilePutRequest(FileHandle.SETTINGS_BUTTONS, builder.build(true), this) {
+                @Override
+                public void onFilePut(boolean success) {
+                    if (success)
+                        LOG.info("successfully overwritten button settings");
+                    else LOG.error("error overwriting button settings");
+                }
+            };
+            queueWrite(fileUploadRequest);
+        } catch (JSONException e) {
+            LOG.error("JSON error", e);
+        }
+    }
+
+    @Override
+    public void setActivityHand(double progress) {
+        queueWrite(new ConfigurationPutRequest(
+                new ConfigurationPutRequest.CurrentStepCountConfigItem(Math.min(999999, (int) (1000000 * progress))),
+                this
+        ), false);
+    }
+
+    @Override
+    public void setHands(MoveHandsRequest.MovementConfiguration movement) {
+        GBDevice dev = getDeviceSupport().getDevice();
+        boolean isHybridHR = ((QHybridCoordinator) dev.getDeviceCoordinator()).isHybridHR(dev);
+        queueWrite(new MoveHandsRequest(movement, isHybridHR), false);
+    }
+
+    @Override
+    public void saveCalibration() {
+        queueWrite(new SaveCalibrationRequest());
+    }
+
+    @Override
+    public void vibrate(nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.misfit.PlayNotificationRequest.VibrationType vibration) {
+        // queueWrite(new nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.misfit.PlayNotificationRequest(vibration, -1, -1));
+    }
+
+    @Override
+    public void requestHandsControl() {
+        queueWrite(new RequestHandControlRequest(), false);
+    }
+
+    @Override
+    public void releaseHandsControl() {
+        queueWrite(new ReleaseHandsControlRequest(), false);
+    }
+
+    @Override
+    public void setStepGoal(int stepGoal) {
+        LOG.info("setStepGoal called with value: {}", stepGoal);
+
+        queueWrite(new ConfigurationPutRequest(new ConfigurationPutRequest.DailyStepGoalConfigItem(stepGoal), this) {
+            @Override
+            public void onFilePut(boolean success) {
+                if (success)
+                    LOG.info("successfully updated step goal to {}", stepGoal);
+                else LOG.error("error updating step goal to {}", stepGoal);
+            }
+        }, false);
+    }
+
+    protected void setVibrationStrengthFromConfig() {
+        Prefs prefs = new Prefs(getDeviceSpecificPreferences());
+        int vibrationStrengh = prefs.getInt(DeviceSettingsPreferenceConst.PREF_VIBRATION_STRENGH_PERCENTAGE, 2);
+        if (vibrationStrengh > 0) {
+            vibrationStrengh = (vibrationStrengh + 1) * 25; // Seems 0,50,75,100 are working...
+        }
+        setVibrationStrength((short) (vibrationStrengh));
+    }
+
+    @Override
+    public void setVibrationStrength(short strength) {
+        ConfigurationPutRequest.ConfigItem vibrationItem = new ConfigurationPutRequest.VibrationStrengthConfigItem((byte) strength);
+        queueWrite(
+                new ConfigurationPutRequest(new ConfigurationPutRequest.ConfigItem[]{vibrationItem}, this) {
+                    @Override
+                    public void onFilePut(boolean success) {
+                        if (success)
+                            LOG.info("successfully updated vibration strength to {}", strength);
+                        else
+                            LOG.error("error updating vibration strength to {}", strength);
+                    }
+                }, false
+        );
+        // queueWrite(new FileVerifyRequest((short) 0x0800));
+    }
+
+    @Override
+    public void syncNotificationSettings() {
+        log("syncing notification settings...");
+        try {
+            PackageConfigHelper helper = new PackageConfigHelper(getContext());
+            final ArrayList<NotificationConfiguration> configurations = helper.getNotificationConfigurations();
+            if (configurations.size() == 1) configurations.add(configurations.get(0));
+            queueWrite(new NotificationFilterPutRequest(configurations, FossilWatchAdapter.this) {
+                @Override
+                public void onFilePut(boolean success) {
+                    super.onFilePut(success);
+
+                    if (!success) {
+                        GB.toast("error writing notification settings", Toast.LENGTH_SHORT, GB.ERROR);
+
+                        getDeviceSupport().getDevice().setUpdateState(GBDevice.State.NOT_CONNECTED, getContext());
+                    }
+
+                    getDeviceSupport().getDevice().setUpdateState(GBDevice.State.INITIALIZED, getContext());
+                }
+            }, false);
+        } catch (Exception e) {
+            LOG.error("error", e);
+        }
+    }
+
+    @Override
+    public void onTestNewFunction(@Nullable Bundle options) {
+        queueWrite(new FilePutRequest(
+                FileHandle.HAND_ACTIONS,
+                new byte[]{
+                        (byte) 0x01, (byte) 0x00, (byte) 0x08, (byte) 0x01, (byte) 0x01, (byte) 0x24, (byte) 0x00, (byte) 0x85, (byte) 0x01, (byte) 0x30, (byte) 0x52, (byte) 0xFF, (byte) 0x26, (byte) 0x00, (byte) 0x03, (byte) 0x00, (byte) 0x09, (byte) 0x04, (byte) 0x01, (byte) 0x03, (byte) 0xA0, (byte) 0x00, (byte) 0x00, (byte) 0xA0, (byte) 0x00, (byte) 0x00, (byte) 0x08, (byte) 0x01, (byte) 0x05, (byte) 0x00, (byte) 0x93, (byte) 0x00, (byte) 0x02, (byte) 0x09, (byte) 0x04, (byte) 0x01, (byte) 0x03, (byte) 0x00, (byte) 0x24, (byte) 0x00, (byte) 0x00, (byte) 0x24, (byte) 0x00, (byte) 0x08, (byte) 0x01, (byte) 0x50, (byte) 0x00, (byte) 0x01, (byte) 0x00, (byte) 0x1F, (byte) 0xBE, (byte) 0xB4, (byte) 0x1B
+                },
+                this)
+        );
+    }
+
+    @Override
+    public void setTimezoneOffsetMinutes(short offset) {
+        getDeviceSpecificPreferences()
+                .edit()
+                .putInt(CONFIG_ITEM_TIMEZONE_OFFSET, offset)
+                .apply();
+
+        queueWrite(new ConfigurationPutRequest(new ConfigurationPutRequest.TimezoneOffsetConfigItem(offset), this) {
+            @Override
+            public void onFilePut(boolean success) {
+                super.onFilePut(success);
+
+                if (success) LOG.info("successfully updated timezone to offset {}", offset);
+                else LOG.error("error updating timezone to offset {}", offset);
+            }
+        });
+    }
+
+    @Override
+    public void onInstallApp(Uri uri) {
+        UriHelper uriHelper = null;
+        try {
+            uriHelper = UriHelper.get(uri, getContext());
+        } catch (IOException e) {
+            GB.toast(getContext(), "Could not open firmare: " + e.getLocalizedMessage(), Toast.LENGTH_LONG, GB.ERROR, e);
+        }
+        if (uriHelper != null) {
+            try (InputStream in = new BufferedInputStream(uriHelper.openInputStream())) {
+                byte[] firmwareBytes = FileUtils.readAll(in, 1024 * 2024); // 2MB
+                queueWrite(new FirmwareFilePutRequest(firmwareBytes, this));
+            } catch (Exception e) {
+                GB.toast(getContext(), "Firmware cannot be installed: " + e.getLocalizedMessage(), Toast.LENGTH_LONG, GB.ERROR, e);
+            }
+        }
+    }
+
+    @Override
+    public boolean supportsExtendedVibration() {
+        String modelNumber = getDeviceSupport().getDevice().getModel();
+        switch (modelNumber) {
+            case "HW.0.0":
+            case "IV.0.0":
+            case "DN.1.0":
+            case "WA.0.0":
+            case "VA.0.0":
+                return true;
+            case "HL.0.0":
+                return false;
+        }
+        throw new UnsupportedOperationException("model " + modelNumber + " not supported");
+    }
+
+    @Override
+    public boolean supportsActivityHand() {
+        String modelNumber = getDeviceSupport().getDevice().getModel();
+        return switch (modelNumber) {
+            case "HW.0.0" -> true;
+            case "HL.0.0", "IV.0.0", "DN.1.0", "WA.0.0", "VA.0.0" -> false;
+            default ->
+                    throw new UnsupportedOperationException("Model " + modelNumber + " not supported");
+        };
+    }
+
+    protected void writeFile(String dirname, String fileName, byte[] value) {
+        File activityDir = new File(getContext().getExternalFilesDir(null), dirname);
+        activityDir.mkdir();
+        File f = new File(activityDir, fileName);
+        try {
+            f.createNewFile();
+            FileOutputStream fos = new FileOutputStream(f);
+            fos.write(value);
+            fos.close();
+            LOG.debug("Saved raw activity file: " + f.getName());
+        } catch (IOException e) {
+            LOG.error("file error", e);
+        }
+    }
+
+    @Override
+    public void onFetchActivityData() {
+        queueWrite(new FileLookupAndGetRequest(FileHandle.ACTIVITY_FILE, this) {
+            @Override
+            public void handleFileData(byte[] fileData) {
+                try (DBHandler dbHandler = GBApplication.acquireDB()) {
+                    ActivityFileParser parser = new ActivityFileParser();
+                    parser.parseFile(fileData);
+                    ArrayList<ActivityEntry> entries = parser.getActivitySamples();
+                    HybridHRActivitySampleProvider provider = new HybridHRActivitySampleProvider(getDeviceSupport().getDevice(), dbHandler.getDaoSession());
+
+                    HybridHRActivitySample[] samples = new HybridHRActivitySample[entries.size()];
+
+                    Long userId = DBHelper.getUser(dbHandler.getDaoSession()).getId();
+                    Long deviceId = DBHelper.getDevice(getDeviceSupport().getDevice(), dbHandler.getDaoSession()).getId();
+                    for (int i = 0; i < entries.size(); i++) {
+                        samples[i] = entries.get(i).toDAOActivitySample(userId, deviceId);
+                    }
+                    if (BuildConfig.DEBUG) {
+                        LOG.debug("Activity samples parsed successfully: {}", Arrays.stream(samples).toList());
+                    }
+
+                    provider.addGBActivitySamples(Arrays.asList(samples));
+
+                    if (saveRawActivityFiles) {
+                        writeFile("activity_qhybrid", String.valueOf(System.currentTimeMillis()), fileData);
+                    }
+
+                    queueWrite(new FileDeleteRequest(getHandle()));
+                    GB.updateTransferNotification(null, "", false, 100, getContext());
+                    GB.signalActivityDataFinish(getDeviceSupport().getDevice());
+                    LOG.debug("Synchronized activity data");
+                } catch (Exception ex) {
+                    GB.toast(getContext(), "Error saving steps data: " + ex.getLocalizedMessage(), Toast.LENGTH_LONG, GB.ERROR);
+                    LOG.error("Error saving steps data: ", ex);
+                    GB.updateTransferNotification(null, "Data transfer failed", false, 0, getContext());
+                }
+                getDeviceSupport().getDevice().unsetBusyTask();
+                getDeviceSupport().getDevice().sendDeviceUpdateIntent(getContext());
+            }
+
+            @Override
+            public void handleFileLookupError(FILE_LOOKUP_ERROR error) {
+                if(error == FILE_LOOKUP_ERROR.FILE_EMPTY){
+                    LOG.debug("No activity data to sync");
+                }
+                getDeviceSupport().getDevice().unsetBusyTask();
+                GB.updateTransferNotification(null, "", false, 100, getContext());
+                getDeviceSupport().getDevice().sendDeviceUpdateIntent(getContext());
+            }
+        });
+    }
+
+    @Override
+    public void onSetAlarms(ArrayList<? extends Alarm> alarms) {
+
+        // handle one-shot alarm from the widget:
+        // this device doesn't have concept of on-off alarm, so use the last slot for this and store
+        // this alarm in the database so the user knows what is going on and can disable it
+
+        if (alarms.size() == 1 && alarms.get(0).getRepetition() == 0) { //single shot?
+            Alarm oneshot = alarms.get(0);
+            alarms = (ArrayList<? extends Alarm>) AlarmUtils.mergeOneshotToDeviceAlarms(getDeviceSupport().getDevice(), (nodomain.freeyourgadget.gadgetbridge.entities.Alarm) oneshot, 5);
+        }
+
+        ArrayList<nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.alarm.Alarm> activeAlarms = new ArrayList<>();
+        for (Alarm alarm : alarms) {
+            if (!alarm.getEnabled() || alarm.getUnused()) continue;
+            if (alarm.getRepetition() == 0) {
+                activeAlarms.add(new nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.alarm.Alarm(
+                        (byte) alarm.getMinute(),
+                        (byte) alarm.getHour(),
+                        alarm.getTitle(),
+                        alarm.getDescription()
+                ));
+                continue;
+            }
+            int repitition = alarm.getRepetition();
+            repitition = (repitition << 1) | ((repitition >> 6) & 1);
+            activeAlarms.add(new nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.alarm.Alarm(
+                    (byte) alarm.getMinute(),
+                    (byte) alarm.getHour(),
+                    (byte) repitition,
+                    alarm.getTitle(),
+                    alarm.getDescription()
+            ));
+        }
+        queueWrite(new AlarmsSetRequest(activeAlarms.toArray(new nodomain.freeyourgadget.gadgetbridge.service.devices.qhybrid.requests.fossil.alarm.Alarm[0]), this) {
+            @Override
+            public void onFilePut(boolean success) {
+                super.onFilePut(success);
+                if (success) GB.toast(getContext().getString(R.string.user_feedback_miband_set_alarms_ok), Toast.LENGTH_SHORT, GB.INFO);
+                else GB.toast(getContext().getString(R.string.user_feedback_miband_set_alarms_failed), Toast.LENGTH_SHORT, GB.INFO);
+            }
+        });
+    }
+
+    @Override
+    public void onSendConfiguration(String config) {
+        switch (config) {
+            case DeviceSettingsPreferenceConst.PREF_VIBRATION_STRENGH_PERCENTAGE: {
+                setVibrationStrengthFromConfig();
+                break;
+            }
+            case DeviceSettingsPreferenceConst.PREF_HYBRID_HR_SAVE_RAW_ACTIVITY_FILES: {
+                saveRawActivityFiles = getDeviceSpecificPreferences().getBoolean("save_raw_activity_files", false);
+                break;
+            }
+            case ActivityUser.PREF_USER_STEPS_GOAL: {
+                setStepGoal(new ActivityUser().getStepsGoal());
+                break;
+            }
+            case "use_activity_hand_as_notification_counter":
+                if (getDeviceSpecificPreferences().getBoolean("use_activity_hand_as_notification_counter", false)) {
+                    setStepGoal(1000000);
+                } else {
+                    setStepGoal(new ActivityUser().getStepsGoal());
+                }
+                break;
+        }
+    }
+
+    @Override
+    public boolean onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, byte[] value) {
+        switch (characteristic.getUuid().toString()) {
+            case "3dda0006-957f-7d4a-34a6-74696673696d": {
+                handleBackgroundCharacteristic(characteristic, value);
+                break;
+            }
+            case "00002a37-0000-1000-8000-00805f9b34fb": {
+                handleHeartRateCharacteristic(characteristic, value);
+                break;
+            }
+            case "3dda0002-957f-7d4a-34a6-74696673696d":
+            case "3dda0004-957f-7d4a-34a6-74696673696d":
+            case "3dda0005-957f-7d4a-34a6-74696673696d":
+            case "3dda0003-957f-7d4a-34a6-74696673696d": {
+                if (fossilRequest != null) {
+                    boolean requestFinished;
+                    try {
+                        if (characteristic.getUuid().toString().equals("3dda0003-957f-7d4a-34a6-74696673696d")) {
+                            byte requestType = (byte) (value[0] & 0x0F);
+
+                            if (requestType != 0x0A && requestType != fossilRequest.getType()) {
+                                // throw new RuntimeException("Answer type " + requestType + " does not match current request " + fossilRequest.getType());
+                            }
+                        }
+
+                        fossilRequest.handleResponse(characteristic, value);
+                        requestFinished = fossilRequest.isFinished();
+                    } catch (RuntimeException e) {
+                        if (characteristic.getUuid().toString().equals("3dda0005-957f-7d4a-34a6-74696673696d")) {
+                            LOG.error("authentication failed", e);
+                            // setDeviceState(GBDevice.State.AUTHENTICATION_REQUIRED);
+                        }else {
+                            LOG.error("error", e);
+                            if (BuildConfig.DEBUG)
+                                GB.toast(fossilRequest.getName() + " failed", Toast.LENGTH_SHORT, GB.ERROR);
+                        }
+
+                        requestFinished = true;
+                    }
+
+                    if (requestFinished) {
+                        log(fossilRequest.getName() + " finished");
+                        fossilRequest = null;
+                        stopRequestTimeout();
+                    } else {
+                        return true;
+                    }
+                }
+                queueNextRequest();
+            }
+        }
+        return true;
+    }
+
+    public void handleHeartRateCharacteristic(BluetoothGattCharacteristic characteristic, byte[] value) {
+    }
+
+    @Override
+    public void onFindDevice(boolean start) {
+        try {
+            if (start) {
+                vibrateStartCall();
+            } else {
+                vibrateEndCall();
+            }
+        } catch (UnsupportedOperationException e) {
+            LOG.error("error", e);
+        }
+    }
+
+    protected void handleBackgroundCharacteristic(BluetoothGattCharacteristic characteristic, byte[] value) {
+        byte requestType = value[1];
+
+        String upperButtonFunction = getDeviceSpecificPreferences().getString("top_button_function", "");
+        String middleButtonFunction = getDeviceSpecificPreferences().getString("middle_button_function", "");
+        String bottomButtonFunction = getDeviceSpecificPreferences().getString("bottom_button_function", "");
+
+        switch (requestType) {
+            case 0x02: {
+                byte syncId = value[2];
+                getDeviceSupport().getDevice().addDeviceInfo(new GenericItem(QHybridSupport.ITEM_LAST_HEARTBEAT, DateFormat.getTimeInstance().format(new Date())));
+                break;
+            }
+            case 0x08: { // FORWARD_TO_PHONE / RING_PHONE
+                if (value.length != 12) {
+                    throw new RuntimeException("wrong button message");
+                }
+                int index = value[2] & 0xFF;
+                int button = value[9] >> 4 & 0xFF;
+
+                if (index != this.lastButtonIndex) {
+                    lastButtonIndex = index;
+                    log("Button press on button " + button);
+
+                    if ((button == 1 && upperButtonFunction.equals("RING_PHONE"))
+                        || (button == 2 && middleButtonFunction.equals("RING_PHONE"))
+                        || (button == 3 && bottomButtonFunction.equals("RING_PHONE"))) {
+                        GBDeviceEventFindPhone findPhoneEvent = new GBDeviceEventFindPhone();
+                        findPhoneEvent.event = findPhoneActive ? GBDeviceEventFindPhone.Event.STOP : GBDeviceEventFindPhone.Event.START;
+                        getDeviceSupport().evaluateGBDeviceEvent(findPhoneEvent);
+                        findPhoneActive = !findPhoneActive;
+                    } else {
+                        Intent i = new Intent(QHYBRID_EVENT_BUTTON_PRESS);
+                        i.putExtra("BUTTON", button);
+                        getContext().sendBroadcast(i);
+
+                        LOG.debug("Sent broadcast intent: ACTION={} EXTRA=BUTTON={}", QHYBRID_EVENT_BUTTON_PRESS, button);
+                    }
+                }
+                break;
+            }
+
+            case 0x05: { // FORWARD_TO_PHONE_MULTI / VOLUME_UP / VOLUME_DOWN / MUSIC_CONTROL
+                if (value.length != 4) {
+                    throw new RuntimeException("wrong button message");
+                }
+                int action = value[3];
+
+                boolean musicControlEnabled = upperButtonFunction.equals("MUSIC_CONTROL") || middleButtonFunction.equals("MUSIC_CONTROL") || bottomButtonFunction.equals("MUSIC_CONTROL");
+                MusicControlRequest.MUSIC_WATCH_REQUEST request = MusicControlRequest.MUSIC_WATCH_REQUEST.fromCommandByte((byte)action);
+                GBDevice currentDevice = getDeviceSupport().getDevice();
+                if (((QHybridCoordinator) currentDevice.getDeviceCoordinator()).isHybridHR(currentDevice)
+                    || request == MusicControlRequest.MUSIC_WATCH_REQUEST.MUSIC_REQUEST_LOUDER
+                    || request == MusicControlRequest.MUSIC_WATCH_REQUEST.MUSIC_REQUEST_QUITER
+                    || (musicControlEnabled && request == MusicControlRequest.MUSIC_WATCH_REQUEST.MUSIC_REQUEST_PLAY_PAUSE)
+                    || (musicControlEnabled && request == MusicControlRequest.MUSIC_WATCH_REQUEST.MUSIC_REQUEST_NEXT)
+                    || (musicControlEnabled && request == MusicControlRequest.MUSIC_WATCH_REQUEST.MUSIC_REQUEST_PREVIOUS)
+                ) {
+                    handleMusicRequest(value);
+                } else {
+                    String actionString = "SINGLE";
+                    if (action == 3) actionString = "DOUBLE";
+                    else if (action == 4) actionString = "LONG";
+
+                    // lastButtonIndex = index;
+                    log(actionString + " button press");
+
+                    Intent i = new Intent(QHYBRID_EVENT_MULTI_BUTTON_PRESS);
+                    i.putExtra("ACTION", actionString);
+                    getContext().sendBroadcast(i);
+
+                    LOG.debug("Sent broadcast intent: ACTION={} EXTRA=ACTION={}", QHYBRID_EVENT_MULTI_BUTTON_PRESS, actionString);
+                }
+                break;
+            }
+        }
+    }
+
+    private void handleMusicRequest(byte[] value) {
+        byte command = value[3];
+        LOG.info("got music command: " + command);
+        MusicControlRequest.MUSIC_WATCH_REQUEST request = MusicControlRequest.MUSIC_WATCH_REQUEST.fromCommandByte(command);
+
+        GBDeviceEventMusicControl deviceEventMusicControl = new GBDeviceEventMusicControl();
+        deviceEventMusicControl.event = GBDeviceEventMusicControl.Event.PLAY;
+
+        // TODO add skipping/seeking
+
+        switch (request) {
+            case MUSIC_REQUEST_PLAY_PAUSE: {
+                queueWrite(new MusicControlRequest(MusicControlRequest.MUSIC_PHONE_REQUEST.MUSIC_REQUEST_PLAY_PAUSE));
+                deviceEventMusicControl.event = GBDeviceEventMusicControl.Event.PLAYPAUSE;
+                break;
+            }
+            case MUSIC_REQUEST_NEXT: {
+                queueWrite(new MusicControlRequest(MusicControlRequest.MUSIC_PHONE_REQUEST.MUSIC_REQUEST_NEXT));
+                deviceEventMusicControl.event = GBDeviceEventMusicControl.Event.NEXT;
+                break;
+            }
+            case MUSIC_REQUEST_PREVIOUS: {
+                queueWrite(new MusicControlRequest(MusicControlRequest.MUSIC_PHONE_REQUEST.MUSIC_REQUEST_PREVIOUS));
+                deviceEventMusicControl.event = GBDeviceEventMusicControl.Event.PREVIOUS;
+                break;
+            }
+            case MUSIC_REQUEST_LOUDER: {
+                queueWrite(new MusicControlRequest(MusicControlRequest.MUSIC_PHONE_REQUEST.MUSIC_REQUEST_LOUDER));
+                deviceEventMusicControl.event = GBDeviceEventMusicControl.Event.VOLUMEUP;
+                break;
+            }
+            case MUSIC_REQUEST_QUITER: {
+                queueWrite(new MusicControlRequest(MusicControlRequest.MUSIC_PHONE_REQUEST.MUSIC_REQUEST_QUITER));
+                deviceEventMusicControl.event = GBDeviceEventMusicControl.Event.VOLUMEDOWN;
+                break;
+            }
+        }
+
+        getDeviceSupport().evaluateGBDeviceEvent(deviceEventMusicControl);
+    }
+
+    @Override
+    public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
+        super.onMtuChanged(gatt, mtu, status);
+
+        if (this.MTU == mtu) {
+            log("MTU changed, same value tho");
+            return;
+        }
+
+        log("MTU changed: " + mtu);
+
+        this.MTU = mtu;
+
+        getDeviceSupport().getDevice().addDeviceInfo(new GenericItem(ITEM_MTU, String.valueOf(mtu)));
+        getDeviceSupport().getDevice().sendDeviceUpdateIntent(getContext());
+
+        ((RequestMtuRequest) fossilRequest).setFinished(true);
+        queueNextRequest();
+    }
+
+    public void queueWrite(RequestMtuRequest request, boolean prioritise) {
+        log("is connected: " + getDeviceSupport().isConnected());
+        if (!getDeviceSupport().isConnected()) {
+            log("dropping request " + request.getName());
+            return;
+        }
+        getDeviceSupport().createTransactionBuilder("requestMtu")
+                .requestMtu(512)
+                .queue();
+
+        this.fossilRequest = request;
+    }
+
+    private void log(String message) {
+        LOG.debug(message);
+    }
+
+    public void queueWrite(SetDeviceStateRequest request, boolean prioritise) {
+        if (fossilRequest != null && !fossilRequest.isFinished()) {
+            log("queing request: " + request.getName());
+            if (prioritise) {
+                requestQueue.add(0, request);
+            } else {
+                requestQueue.add(request);
+            }
+            return;
+        }
+        log("setting device state: " + request.getDeviceState());
+        setDeviceState(request.getDeviceState());
+        queueNextRequest();
+    }
+
+    private void setDeviceState(GBDevice.State state) {
+        getDeviceSupport().getDevice().setUpdateState(state, getContext());
+    }
+
+    public void queueWrite(FossilRequest request, boolean prioritise) {
+        log("is connected: " + getDeviceSupport().isConnected());
+        if (!getDeviceSupport().isConnected()) {
+            log("dropping request " + request.getName());
+            return;
+        }
+        if (fossilRequest != null && !fossilRequest.isFinished()) {
+            log("queing request: " + request.getName());
+            if (prioritise) {
+                requestQueue.add(0, request);
+            } else {
+                requestQueue.add(request);
+            }
+            return;
+        }
+        log("executing request: " + request.getName());
+        restartRequestTimeout();
+        this.fossilRequest = request;
+        getDeviceSupport().createTransactionBuilder(request.getClass().getSimpleName()).write(request.getRequestUUID(), request.getRequestData()).queue();
+
+        if (request.isFinished()) {
+            this.fossilRequest = null;
+            stopRequestTimeout();
+            queueNextRequest();
+        }
+    }
+
+    public void queueWrite(Request request, boolean prioritise) {
+        log("is connected: " + getDeviceSupport().isConnected());
+        if (!getDeviceSupport().isConnected()) {
+            log("dropping request " + request.getName());
+            return;
+        }
+        restartRequestTimeout();
+        getDeviceSupport().createTransactionBuilder(request.getClass().getSimpleName()).write(request.getRequestUUID(), request.getRequestData()).queue();
+
+        queueNextRequest();
+    }
+
+    protected void queueWrite(Request request) {
+        log("is connected: " + getDeviceSupport().isConnected());
+        if (!getDeviceSupport().isConnected()) {
+            log("dropping request " + request.getName());
+            return;
+        }
+        if (request instanceof SetDeviceStateRequest)
+            queueWrite((SetDeviceStateRequest) request, false);
+        else if (request instanceof RequestMtuRequest)
+            queueWrite((RequestMtuRequest) request, false);
+        else if (request instanceof FossilRequest) queueWrite((FossilRequest) request, false);
+        else queueWrite(request, false);
+    }
+
+    private void queueNextRequest() {
+        try {
+            Request request = requestQueue.remove(0);
+            queueWrite(request);
+        } catch (IndexOutOfBoundsException e) {
+            log("requestsQueue empty");
+        }
+    }
+}

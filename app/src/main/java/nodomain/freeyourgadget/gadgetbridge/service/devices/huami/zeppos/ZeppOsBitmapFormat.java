@@ -1,0 +1,117 @@
+package nodomain.freeyourgadget.gadgetbridge.service.devices.huami.zeppos;
+
+import android.graphics.Bitmap;
+import android.util.Pair;
+
+import androidx.annotation.Nullable;
+
+import com.android.nQuant.PnnLABQuantizer;
+
+import java.nio.ByteBuffer;
+
+import nodomain.freeyourgadget.gadgetbridge.service.btle.BLETypeConversions;
+import nodomain.freeyourgadget.gadgetbridge.util.BitmapUtil;
+
+public enum ZeppOsBitmapFormat {
+    TGA_RGB565_GCNANOLITE(0x04) {
+        @Override
+        public byte[] encode(final Bitmap bmp, final int width, final int height) {
+            return BitmapUtil.convertToTgaRGB565(bmp, width, height, getTgaIdBytes(width));
+        }
+    },
+
+    // Zepp OS 4
+    TGA_L8_ARGB8888_GCNANOLITE(0x05) {
+        @Override
+        public byte[] encode(final Bitmap bmp, final int width, final int height) {
+            final Bitmap resizedBmp = BitmapUtil.convert(bmp, Bitmap.Config.ARGB_8888, width, height);
+
+            final PnnLABQuantizer pnnLABQuantizer = new PnnLABQuantizer(resizedBmp);
+            final Pair<Bitmap, int[]> converted = pnnLABQuantizer.convert(256, true);
+
+            final Bitmap ditheredBmp = converted.first;
+            final int[] palette = converted.second;
+
+            // we need to allocate 256b even if we don't use all of them, otherwise
+            // the watches misbehave
+            final byte[] paletteBytes = new byte[256 * 4];
+            for (int i = 0; i < palette.length; i++) {
+                // ARGB -> RGBA
+                final int color = palette[i];
+                paletteBytes[i * 4] = (byte) ((color >> 16) & 0xff);
+                paletteBytes[i * 4 + 1] = (byte) ((color >> 8) & 0xff);
+                paletteBytes[i * 4 + 2] = (byte) (color & 0xff);
+                paletteBytes[i * 4 + 3] = (byte) ((color >> 24) & 0xff);
+            }
+
+            final ByteBuffer imageDataBuf = ByteBuffer.allocate(ditheredBmp.getHeight() * ditheredBmp.getWidth());
+            for (int y = 0; y < ditheredBmp.getHeight(); y++) {
+                for (int x = 0; x < ditheredBmp.getWidth(); x++) {
+                    final int pixel = ditheredBmp.getPixel(x, y);
+                    boolean foundInPalette = false;
+                    for (int i = 0; i < palette.length; i++) {
+                        if (palette[i] == pixel) {
+                            imageDataBuf.put((byte) i);
+                            foundInPalette = true;
+                            break;
+                        }
+                    }
+                    if (!foundInPalette) {
+                        imageDataBuf.put((byte) 0);
+                    }
+                }
+            }
+
+            return BitmapUtil.buildTga(imageDataBuf.array(), 8, paletteBytes, width, height, getTgaIdBytes(width));
+        }
+    },
+
+    TGA_RGB565_DAVE2D(0x08) {
+        @Override
+        public byte[] encode(final Bitmap bmp, final int width, final int height) {
+            return BitmapUtil.convertToTgaRGB565(bmp, width, height, getTgaIdBytes(width));
+        }
+    },
+
+    TGA_RGB565_MHS002SNEMAP(0x0a) {
+        @Override
+        public byte[] encode(final Bitmap bmp, final int width, final int height) {
+            return BitmapUtil.convertToTgaRGB565(bmp, width, height, getTgaIdBytes(width));
+        }
+    },
+    ;
+
+    private final byte code;
+
+    ZeppOsBitmapFormat(final int code) {
+        this.code = (byte) code;
+    }
+
+    public byte getCode() {
+        return code;
+    }
+
+    public byte[] getTgaIdBytes(final int width) {
+        final byte[] tgaIdBytes = new byte[46];
+        tgaIdBytes[0] = 'S';
+        tgaIdBytes[1] = 'O';
+        tgaIdBytes[2] = 'M';
+        tgaIdBytes[3] = 'H';
+        BLETypeConversions.writeUint32(tgaIdBytes, 4, width);
+        return tgaIdBytes;
+    }
+
+    @Nullable
+    public abstract byte[] encode(final Bitmap bmp, final int width, final int height);
+
+    @Nullable
+    public static ZeppOsBitmapFormat fromCode(final byte code) {
+        for (final ZeppOsBitmapFormat format : ZeppOsBitmapFormat.values()) {
+            if (format.code == code) {
+                return format;
+            }
+        }
+
+        return null;
+    }
+}

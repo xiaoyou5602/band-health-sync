@@ -1,0 +1,450 @@
+/*  Copyright (C) 2020-2024 Andreas Shimokawa, José Rebelo, Sebastian Krey,
+    Your Name
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.devices.huami;
+
+import static nodomain.freeyourgadget.gadgetbridge.model.ActivitySummaryEntries.*;
+
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.GBException;
+import nodomain.freeyourgadget.gadgetbridge.activities.workouts.charts.DefaultWorkoutCharts;
+import nodomain.freeyourgadget.gadgetbridge.entities.BaseActivitySummary;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivityPoint;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivitySummaryData;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivitySummaryParser;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivityTrack;
+import nodomain.freeyourgadget.gadgetbridge.model.workout.Workout;
+import nodomain.freeyourgadget.gadgetbridge.model.workout.WorkoutChart;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.BLETypeConversions;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.AbstractHuamiActivityDetailsParser;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.HuamiActivityDetailsParser;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.huami.HuamiSportsActivityType;
+import nodomain.freeyourgadget.gadgetbridge.util.FileUtils;
+
+public class HuamiActivitySummaryParser implements ActivitySummaryParser {
+
+    private static final Logger LOG = LoggerFactory.getLogger(HuamiActivitySummaryParser.class);
+    protected ActivitySummaryData summaryData = new ActivitySummaryData();
+    protected final List<WorkoutChart> charts = new ArrayList<>();
+
+    @Override
+    public BaseActivitySummary parseBinaryData(BaseActivitySummary summary, final boolean forDetails) {
+        // FIXME Do not use this
+        return parseWorkout(summary, forDetails).getSummary();
+    }
+
+    @Override
+    public Workout parseWorkout(final BaseActivitySummary summary, final boolean forDetails) {
+        Date startTime = summary.getStartTime();
+        if (startTime == null) {
+            LOG.error("Due to a bug, we can only parse the summary when startTime is already set");
+            return null;
+        }
+        summaryData = new ActivitySummaryData();
+        charts.clear();
+        summaryData.setHasGps(StringUtils.isNotBlank(summary.getGpxTrack()));
+        parseBinaryData(summary, startTime);
+        summary.setSummaryData(summaryData.toString());
+        if (forDetails && !StringUtils.isBlank(summary.getRawDetailsPath())) {
+            try {
+                final File inputFile = FileUtils.tryFixPath(new File(summary.getRawDetailsPath()));
+                if (inputFile == null) {
+                    LOG.warn("Raw file for details not found: {}", summary.getRawDetailsPath());
+                    return new Workout(summary, ActivitySummaryData.fromJson(summaryData.toString()));
+                }
+
+                final byte[] detailsBytes;
+                try (InputStream inputStream = new FileInputStream(inputFile)) {
+                    detailsBytes = FileUtils.readAll(inputStream, inputFile.length());
+                }
+
+                final AbstractHuamiActivityDetailsParser detailsParser = getDetailsParser(summary);
+                final ActivityTrack activityTrack = detailsParser.parse(detailsBytes);
+
+                enrichWithDetails(summary, activityTrack);
+            } catch (final Exception e) {
+                LOG.error("Failed enrich workout with details", e);
+            }
+        }
+
+        return new Workout(
+                summary,
+                ActivitySummaryData.fromJson(summaryData.toString()),
+                charts
+        );
+    }
+
+    public AbstractHuamiActivityDetailsParser getDetailsParser(final BaseActivitySummary summary) {
+        return new HuamiActivityDetailsParser(summary);
+    }
+
+    protected void parseBinaryData(BaseActivitySummary summary, Date startTime) {
+        final byte[] rawSummaryData = summary.getRawSummaryData();
+        if (rawSummaryData == null) {
+            return;
+        }
+        final ByteBuffer buffer = ByteBuffer.wrap(rawSummaryData).order(ByteOrder.LITTLE_ENDIAN);
+
+        short version = buffer.getShort(); // version
+        LOG.debug("Got sport summary version {} total bytes={}", version, buffer.capacity());
+        ActivityKind activityKind = ActivityKind.UNKNOWN;
+        int rawKind = BLETypeConversions.toUnsigned(buffer.getShort());
+        try {
+            HuamiSportsActivityType activityType = HuamiSportsActivityType.fromCode(rawKind);
+            activityKind = activityType.toActivityKind();
+        } catch (Exception ex) {
+            LOG.error("Error mapping activity kind", ex);
+            summaryData.add("Raw Activity Kind", rawKind, UNIT_NONE);
+        }
+        summary.setActivityKind(activityKind.getCode());
+
+        // FIXME: should honor timezone we were in at that time etc
+        long timestamp_start = BLETypeConversions.toUnsigned(buffer.getInt()) * 1000;
+        long timestamp_end = BLETypeConversions.toUnsigned(buffer.getInt()) * 1000;
+
+
+        // FIXME: should be done like this but seems to return crap when in DST
+        //summary.setStartTime(new Date(timestamp_start));
+        //summary.setEndTime(new Date(timestamp_end));
+
+        // FIXME ... so do it like this
+        long duration = timestamp_end - timestamp_start;
+        summary.setEndTime(new Date(startTime.getTime() + duration));
+
+        int baseLongitude = buffer.getInt();
+        int baseLatitude = buffer.getInt();
+        int baseAltitude = buffer.getInt();
+        summary.setBaseLongitude(baseLongitude);
+        summary.setBaseLatitude(baseLatitude);
+        summary.setBaseAltitude(baseAltitude);
+        summaryData.setHasGps(baseLongitude != 0 || baseLatitude != 0);
+
+        int steps;
+        int activeSeconds;
+        int maxLatitude;
+        int minLatitude;
+        int maxLongitude;
+        int minLongitude;
+        float caloriesBurnt;
+        float distanceMeters;
+        float distanceMeters2 = 0;
+        float ascentDistance = 0;
+        float descentDistance = 0;
+        float flatDistance = 0;
+        float ascentMeters = 0;
+        float descentMeters = 0;
+        float maxAltitude = 0;
+        float minAltitude = 0;
+        float averageAltitude = 0;
+        float maxSpeed = 0;
+        float minSpeed = 0;
+        float averageSpeed = 0;
+        float minPace = 0;
+        float maxPace = 0;
+        float averagePace = 0;
+        int maxCadence = 0;
+        int minCadence = 0;
+        int averageCadence = 0;
+        int maxStride = 0;
+        int minStride = 0;
+        int averageStride2 = 0;
+        float totalStride = 0;
+        float averageStride;
+        short averageHR;
+        short maxHR = 0;
+        short minHR = 0;
+        short averageKMPaceSeconds;
+        int ascentSeconds = 0;
+        int descentSeconds = 0;
+        int flatSeconds = 0;
+
+        // Swimming
+        float averageStrokeDistance = 0;
+        float averageStrokesPerSecond = 0;
+        float averageLapPace = 0;
+        short strokes = 0;
+        short swolfIndex = 0; // this is called SWOLF score on bip s, SWOLF index on mi band 4
+        byte swimStyle = 0;
+        byte laps = 0;
+
+        // Just assuming, Bip has 259 which seems like 256+x
+        // Bip S now has 518 so assuming 512+x, might be wrong
+
+        if (version >= 512) {
+            if (version == 519) {
+                buffer.get(); // skip one byte
+                minHR = buffer.getShort(); // offset 25: garbage sentinel on v519 (always 0x00 0xFF = -256), filtered below
+                // hack that skips data on yet unknown summary version 519 data
+                buffer.position(0x8c);
+            } else if (version == 516) {
+                // hack that skips data on yet unknown summary version 516 data
+                buffer.position(buffer.position() + 4);
+            }
+            steps = buffer.getInt();
+            activeSeconds = buffer.getInt();
+
+            maxLatitude = buffer.getInt();
+            minLatitude = buffer.getInt();
+            maxLongitude = buffer.getInt();
+            minLongitude = buffer.getInt();
+
+            caloriesBurnt = buffer.getFloat();
+            distanceMeters = buffer.getFloat();
+
+            ascentMeters = buffer.getFloat();
+            descentMeters = buffer.getFloat();
+            maxAltitude = buffer.getFloat();
+            minAltitude = buffer.getFloat();
+            averageAltitude = buffer.getFloat();
+
+            maxSpeed = buffer.getFloat(); // in meter/second
+            minSpeed = buffer.getFloat();
+            averageSpeed = buffer.getFloat();
+            minPace = buffer.getFloat(); // in seconds/meter
+            maxPace = buffer.getFloat();
+            averagePace = buffer.getFloat();
+
+            maxCadence = Math.round(buffer.getFloat() * 60);
+            minCadence = Math.round(buffer.getFloat() * 60);
+            averageCadence = Math.round(buffer.getFloat() * 60);
+
+            maxStride = Math.round(buffer.getFloat() * 100);
+            minStride = Math.round(buffer.getFloat() * 100);
+            averageStride2 = Math.round(buffer.getFloat() * 100);
+
+            distanceMeters2 = buffer.getFloat(); // this distance is 87-97% of distanceMeters, so probably length of the GPS track (difference is larger, when GPS took longer to get a precise position)
+            buffer.getInt();
+            averageHR = buffer.getShort();
+            averageKMPaceSeconds = buffer.getShort();
+            averageStride = buffer.getShort();
+            maxHR = buffer.getShort();
+
+            if (activityKind == ActivityKind.CYCLING || activityKind == ActivityKind.RUNNING || activityKind == ActivityKind.HIKING || activityKind == ActivityKind.CLIMBING) {
+                // this had nonsense data with treadmill on bip s, need to test it with running
+                // for cycling it seems to work... hmm...
+                // 28 bytes
+                buffer.getInt(); // unknown
+                ascentDistance = buffer.getFloat();
+                ascentSeconds = buffer.getInt() / 1000; //ms?
+                descentDistance = buffer.getFloat();
+                descentSeconds = buffer.getInt() / 1000; //ms?
+                flatDistance = buffer.getFloat();
+                flatSeconds = buffer.getInt() / 1000; // ms?
+            } else if (activityKind == ActivityKind.SWIMMING || activityKind == ActivityKind.SWIMMING_OPENWATER) {
+                // offset 0x8c
+                /*
+                    data on the bip s display (example)
+                    main style backstroke
+                    SWOLF score 92
+                    total laps 1
+                    avg. pace 2,09/100
+                    strokes 36
+                    avg stroke rate 26 spm
+                    single stroke distance 1,79m
+                    max stroke rate 39
+                 */
+
+                averageStrokeDistance = buffer.getFloat();
+                buffer.getInt(); // unknown
+                buffer.getInt(); // unknown
+                buffer.getInt(); // unknown
+                buffer.getInt(); // unknown
+                buffer.getInt(); // unknown
+                averageStrokesPerSecond = buffer.getFloat();
+                averageLapPace = buffer.getFloat();
+                buffer.getInt(); // unknown
+                strokes = buffer.getShort();
+                swolfIndex = buffer.getShort();
+                swimStyle = buffer.get();
+                laps = buffer.get();
+                buffer.getInt(); // unknown
+                buffer.getInt(); // unknown
+            }
+        } else {
+            distanceMeters = buffer.getFloat();
+            ascentMeters = buffer.getFloat();
+            descentMeters = buffer.getFloat();
+            minAltitude = buffer.getFloat();
+            maxAltitude = buffer.getFloat();
+            maxLatitude = buffer.getInt(); // format?
+            minLatitude = buffer.getInt(); // format?
+            maxLongitude = buffer.getInt(); // format?
+            minLongitude = buffer.getInt(); // format?
+            steps = buffer.getInt();
+            activeSeconds = buffer.getInt();
+            caloriesBurnt = buffer.getFloat();
+            maxSpeed = buffer.getFloat();
+            maxPace = buffer.getFloat();
+            minPace = buffer.getFloat();
+            totalStride = buffer.getFloat();
+
+            buffer.getInt(); // unknown
+            if (activityKind == ActivityKind.SWIMMING) {
+                // 28 bytes
+                averageStrokeDistance = buffer.getFloat();
+                averageStrokesPerSecond = buffer.getFloat();
+                averageLapPace = buffer.getFloat();
+                strokes = buffer.getShort();
+                swolfIndex = buffer.getShort();
+                swimStyle = buffer.get();
+                laps = buffer.get();
+                buffer.getInt(); // unknown
+                buffer.getInt(); // unknown
+                buffer.getShort(); // unknown
+            } else {
+                // 28 bytes
+                buffer.getInt(); // unknown
+                buffer.getInt(); // unknown probably ascentDistance = buffer.getFloat();
+                ascentSeconds = buffer.getInt() / 1000; //ms?
+                buffer.getInt(); // unknown probably descentDistance = buffer.getFloat();
+                descentSeconds = buffer.getInt() / 1000; //ms?
+                buffer.getInt(); // unknown probably flatDistance = buffer.getFloat();
+                flatSeconds = buffer.getInt() / 1000; // ms?
+
+                summaryData.add(ASCENT_SECONDS, ascentSeconds, UNIT_SECONDS);
+                summaryData.add(DESCENT_SECONDS, descentSeconds, UNIT_SECONDS);
+                summaryData.add(FLAT_SECONDS, flatSeconds, UNIT_SECONDS);
+            }
+
+            averageHR = buffer.getShort();
+
+            averageKMPaceSeconds = buffer.getShort();
+            averageStride = buffer.getShort();
+        }
+
+//        summary.setBaseCoordinate(new GPSCoordinate(baseLatitude, baseLongitude, baseAltitude));
+//        summary.setDistanceMeters(distanceMeters);
+//        summary.setAscentMeters(ascentMeters);
+//        summary.setDescentMeters(descentMeters);
+//        summary.setMinAltitude(maxAltitude);
+//        summary.setMaxAltitude(maxAltitude);
+//        summary.setMinLatitude(minLatitude);
+//        summary.setMaxLatitude(maxLatitude);
+//        summary.setMinLongitude(minLatitude);
+//        summary.setMaxLongitude(maxLatitude);
+//        summary.setSteps(steps);
+//        summary.setActiveTimeSeconds(secondsActive);
+//        summary.setCaloriesBurnt(caloriesBurnt);
+//        summary.setMaxSpeed(maxSpeed);
+//        summary.setMinPace(minPace);
+//        summary.setMaxPace(maxPace);
+//        summary.setTotalStride(totalStride);
+//        summary.setTimeAscent(BLETypeConversions.toUnsigned(ascentSeconds);
+//        summary.setTimeDescent(BLETypeConversions.toUnsigned(descentSeconds);
+//        summary.setTimeFlat(BLETypeConversions.toUnsigned(flatSeconds);
+//        summary.setAverageHR(BLETypeConversions.toUnsigned(averageHR);
+//        summary.setAveragePace(BLETypeConversions.toUnsigned(averagePace);
+//        summary.setAverageStride(BLETypeConversions.toUnsigned(averageStride);
+
+        summaryData.add(ASCENT_SECONDS, ascentSeconds, UNIT_SECONDS);
+        summaryData.add(DESCENT_SECONDS, descentSeconds, UNIT_SECONDS);
+        summaryData.add(FLAT_SECONDS, flatSeconds, UNIT_SECONDS);
+        summaryData.add(ASCENT_DISTANCE, ascentDistance, UNIT_METERS);
+        summaryData.add(DESCENT_DISTANCE, descentDistance, UNIT_METERS);
+        summaryData.add(FLAT_DISTANCE, flatDistance, UNIT_METERS);
+
+        summaryData.add(DISTANCE_METERS, distanceMeters, UNIT_METERS);
+        // summaryData.add("distanceMeters2", distanceMeters2, UNIT_METERS);
+        summaryData.add(ASCENT_METERS, ascentMeters, UNIT_METERS);
+        summaryData.add(DESCENT_METERS, descentMeters, UNIT_METERS);
+        if (maxAltitude != -100000) {
+            summaryData.add(ALTITUDE_MAX, maxAltitude, UNIT_METERS);
+        }
+        if (minAltitude != 100000) {
+            summaryData.add(ALTITUDE_MIN, minAltitude, UNIT_METERS);
+        }
+        if (minAltitude != 100000) {
+            summaryData.add(ALTITUDE_AVG, averageAltitude, UNIT_METERS);
+        }
+        summaryData.add(STEPS, steps, UNIT_STEPS);
+        summaryData.add(ACTIVE_SECONDS, activeSeconds, UNIT_SECONDS);
+        summaryData.add(CALORIES_BURNT, caloriesBurnt, UNIT_KCAL);
+        summaryData.add(SPEED_MAX, maxSpeed, UNIT_METERS_PER_SECOND);
+        summaryData.add(SPEED_MIN, minSpeed, UNIT_METERS_PER_SECOND);
+        summaryData.add(SPEED_AVG, averageSpeed, UNIT_METERS_PER_SECOND);
+        summaryData.add(CADENCE_MAX, maxCadence, UNIT_SPM);
+        summaryData.add(CADENCE_MIN, minCadence, UNIT_SPM);
+        summaryData.add(CADENCE_AVG, averageCadence, UNIT_SPM);
+
+        if (!(activityKind == ActivityKind.ELLIPTICAL_TRAINER ||
+                activityKind == ActivityKind.JUMP_ROPING ||
+                activityKind == ActivityKind.EXERCISE ||
+                activityKind == ActivityKind.YOGA ||
+                activityKind == ActivityKind.INDOOR_CYCLING)) {
+            if (minPace > 0 && minPace <= 60.0f) { // > 60 s/m (~100 min/km) is a firmware sentinel (paused, minSpeed==0)
+                summaryData.add(PACE_MIN, minPace, UNIT_SECONDS_PER_M);
+            }
+            summaryData.add(PACE_MAX, maxPace, UNIT_SECONDS_PER_M);
+            // summaryData.add("averagePace", averagePace, UNIT_SECONDS_PER_M);
+        }
+
+        summaryData.add(STRIDE_TOTAL, totalStride, UNIT_METERS);
+        summaryData.add(HR_AVG, averageHR, UNIT_BPM);
+        summaryData.add(HR_MAX, maxHR, UNIT_BPM);
+        if (minHR > 0) {
+            summaryData.add(HR_MIN, minHR, UNIT_BPM);
+        }
+        summaryData.add(PACE_AVG_SECONDS_KM, averageKMPaceSeconds, UNIT_SECONDS_PER_KM);
+        summaryData.add(STRIDE_AVG, averageStride, UNIT_CM);
+        summaryData.add(STRIDE_MAX, maxStride, UNIT_CM);
+        summaryData.add(STRIDE_MIN, minStride, UNIT_CM);
+        // summaryData.add("averageStride2", averageStride2, UNIT_CM);
+
+        if (activityKind == ActivityKind.SWIMMING || activityKind == ActivityKind.SWIMMING_OPENWATER) {
+            summaryData.add(STROKE_DISTANCE_AVG, averageStrokeDistance, UNIT_METERS);
+            summaryData.add(STROKE_AVG_PER_SECOND, averageStrokesPerSecond, UNIT_STROKES_PER_SECOND);
+            summaryData.add(LAP_PACE_AVERAGE, averageLapPace, "second");
+            summaryData.add(STROKES, strokes, "strokes");
+            summaryData.add(SWOLF_INDEX, swolfIndex, "swolf_index");
+            String swimStyleName = switch (swimStyle) {
+                case 1 -> "breaststroke";
+                case 2 -> "freestyle";
+                case 3 -> "backstroke";
+                case 4 -> "medley";
+                default -> "unknown"; // TODO: translate here or keep as string identifier here?
+            };
+            summaryData.add(SWIM_STYLE, swimStyleName);
+            summaryData.add(LAPS, laps, "laps");
+        }
+    }
+
+    protected void enrichWithDetails(final BaseActivitySummary summary, final ActivityTrack activityTrack) throws IOException, GBException {
+        final List<ActivityPoint> allPoints = activityTrack.getAllPoints();
+        if (!allPoints.isEmpty()) {
+            charts.addAll(DefaultWorkoutCharts.buildDefaultCharts(
+                    GBApplication.getContext(),
+                    allPoints,
+                    ActivityKind.fromCode(summary.getActivityKind())
+            ));
+        }
+    }
+}

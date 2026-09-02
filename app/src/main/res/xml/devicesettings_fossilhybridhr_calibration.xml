@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <Preference
+        android:title="@string/qhybrid_title_calibration"
+        android:key="pref_key_qhybrid_calibration"
+        android:icon="@drawable/ic_angle_calibrate"
+        android:summary="@string/qhybrid_summary_calibration">
+    </Preference>
+
+</androidx.preference.PreferenceScreen>

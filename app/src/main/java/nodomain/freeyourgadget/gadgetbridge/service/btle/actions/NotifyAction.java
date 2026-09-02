@@ -1,0 +1,154 @@
+/*  Copyright (C) 2015-2026 Alicia Hormann, Carsten Pfeiffer, Daniele Gobbetti
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.service.btle.actions;
+
+import android.annotation.SuppressLint;
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
+import android.bluetooth.BluetoothStatusCodes;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.BleNamesResolver;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.BtLEAction;
+import nodomain.freeyourgadget.gadgetbridge.service.btle.GattCallback;
+
+import static nodomain.freeyourgadget.gadgetbridge.service.btle.GattDescriptor.UUID_DESCRIPTOR_GATT_CLIENT_CHARACTERISTIC_CONFIGURATION;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresPermission;
+
+/**
+ * Enables or disables notifications for a given {@link BluetoothGattCharacteristic}.
+ * The result will be made available asynchronously through the
+ * {@link GattCallback#onDescriptorWrite(BluetoothGatt, BluetoothGattDescriptor, int)}.
+ */
+public class NotifyAction extends BtLEAction {
+
+    private static final Logger LOG = LoggerFactory.getLogger(NotifyAction.class);
+    private final boolean enableFlag;
+    private boolean hasWrittenDescriptor;
+
+    public NotifyAction(@NonNull BluetoothGattCharacteristic characteristic, boolean enable) {
+        super(characteristic);
+        enableFlag = enable;
+        hasWrittenDescriptor = false;
+    }
+
+    /// shared write implementation that can be used without a BtLEAction
+    @SuppressLint("MissingPermission")
+    public static boolean writeDescriptor(@Nullable final BluetoothGatt gatt,
+                                          @Nullable final BluetoothGattDescriptor descriptor,
+                                          @NonNull final byte[] value) {
+        if (gatt == null) {
+            LOG.error("gatt == null");
+            return false;
+        }
+
+        if (descriptor == null) {
+            LOG.error("descriptor == null");
+            return false;
+        }
+
+        final String charUuid = descriptor.getCharacteristic().getUuid().toString();
+
+        if (GBApplication.isRunningTiramisuOrLater()) {
+            // use API introduced in SDK level 33 to catch exceptions and more specific errors
+            try {
+                final int result = gatt.writeDescriptor(descriptor, value);
+
+                if (result != BluetoothStatusCodes.SUCCESS) {
+                    LOG.error("Writing characteristic {} descriptor failed: {}", charUuid, BleNamesResolver.getBluetoothStatusString(result));
+                    return false;
+                }
+            } catch (final SecurityException ex) {
+                LOG.error("SecurityException while writing to characteristic {} descriptor: {}", charUuid, ex.getMessage(), ex);
+                return false;
+            }
+        } else {
+            if (!descriptor.setValue(value)) {
+                LOG.error("Updating descriptor value on characteristic {} failed", charUuid);
+                return false;
+            }
+
+            if (!gatt.writeDescriptor(descriptor)) {
+                LOG.error("Writing descriptor on characteristic {} failed", charUuid);
+                return false;
+            }
+        }
+
+        LOG.debug("Successfully written characteristic {} descriptor", charUuid);
+        return true;
+    }
+
+    @Override
+    @RequiresPermission("android.permission.BLUETOOTH_CONNECT")
+    public boolean run(@NonNull BluetoothGatt gatt) {
+        // register gatt's callback to receive notifications
+        boolean result = gatt.setCharacteristicNotification(getCharacteristic(), enableFlag);
+
+        if (result) {
+            BluetoothGattDescriptor clientCharConfigDescriptor = getCharacteristic().getDescriptor(UUID_DESCRIPTOR_GATT_CLIENT_CHARACTERISTIC_CONFIGURATION);
+
+            if (clientCharConfigDescriptor != null) {
+                int properties = getCharacteristic().getProperties();
+
+                if ((properties & BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0) {
+                    LOG.debug("use NOTIFICATION for Characteristic {}", getCharacteristic().getUuid());
+                    final byte[] value = enableFlag ? BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE : BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE;
+                    result = writeDescriptor(gatt, clientCharConfigDescriptor, value);
+                    hasWrittenDescriptor = true;
+                } else if ((properties & BluetoothGattCharacteristic.PROPERTY_INDICATE) > 0) {
+                    LOG.debug("use INDICATION for Characteristic {}", getCharacteristic().getUuid());
+                    final byte[] value = enableFlag ? BluetoothGattDescriptor.ENABLE_INDICATION_VALUE : BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE;
+                    result =  writeDescriptor(gatt, clientCharConfigDescriptor, value);
+                    hasWrittenDescriptor = true;
+                } else {
+                    LOG.debug("use neither NOTIFICATION nor INDICATION for Characteristic {}", getCharacteristic().getUuid());
+                    hasWrittenDescriptor = false;
+                }
+            } else {
+                LOG.warn("Descriptor CLIENT_CHARACTERISTIC_CONFIGURATION for characteristic {}", getCharacteristic().getUuid() + " is null");
+                hasWrittenDescriptor = false;
+            }
+        } else {
+            LOG.error("Unable to enable notifications for {}", getCharacteristic().getUuid());
+            hasWrittenDescriptor = false;
+        }
+
+        return result;
+    }
+
+    @Override
+    public boolean expectsResult() {
+        return hasWrittenDescriptor;
+    }
+
+    @NonNull
+    @Override
+    public String toString() {
+        BluetoothGattCharacteristic characteristic = getCharacteristic();
+        String uuid = characteristic == null ? "(null)" : characteristic.getUuid().toString();
+
+        return getCreationTime() + " " + getClass().getSimpleName() + " " + uuid +
+                (enableFlag ? " enable" : " disable");
+    }
+}

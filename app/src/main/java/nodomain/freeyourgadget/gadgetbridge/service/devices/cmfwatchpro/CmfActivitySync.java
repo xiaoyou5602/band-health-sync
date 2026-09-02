@@ -1,0 +1,519 @@
+/*  Copyright (C) 2024 José Rebelo
+
+    This file is part of Gadgetbridge.
+
+    Gadgetbridge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Gadgetbridge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+package nodomain.freeyourgadget.gadgetbridge.service.devices.cmfwatchpro;
+
+import android.content.Context;
+import android.widget.Toast;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.List;
+
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.database.DBHandler;
+import nodomain.freeyourgadget.gadgetbridge.database.DBHelper;
+import nodomain.freeyourgadget.gadgetbridge.devices.CmfHeartRateSampleProvider;
+import nodomain.freeyourgadget.gadgetbridge.devices.CmfSleepSessionSampleProvider;
+import nodomain.freeyourgadget.gadgetbridge.devices.CmfSleepStageSampleProvider;
+import nodomain.freeyourgadget.gadgetbridge.devices.CmfSpo2SampleProvider;
+import nodomain.freeyourgadget.gadgetbridge.devices.CmfStressSampleProvider;
+import nodomain.freeyourgadget.gadgetbridge.devices.CmfWorkoutGpsSampleProvider;
+import nodomain.freeyourgadget.gadgetbridge.devices.cmfwatchpro.samples.CmfActivitySampleProvider;
+import nodomain.freeyourgadget.gadgetbridge.devices.cmfwatchpro.workout.CmfActivityTrackProvider;
+import nodomain.freeyourgadget.gadgetbridge.devices.cmfwatchpro.workout.CmfWorkoutSummaryParser;
+import nodomain.freeyourgadget.gadgetbridge.entities.BaseActivitySummary;
+import nodomain.freeyourgadget.gadgetbridge.entities.CmfActivitySample;
+import nodomain.freeyourgadget.gadgetbridge.entities.CmfHeartRateSample;
+import nodomain.freeyourgadget.gadgetbridge.entities.CmfSleepSessionSample;
+import nodomain.freeyourgadget.gadgetbridge.entities.CmfSleepStageSample;
+import nodomain.freeyourgadget.gadgetbridge.entities.CmfSpo2Sample;
+import nodomain.freeyourgadget.gadgetbridge.entities.CmfStressSample;
+import nodomain.freeyourgadget.gadgetbridge.entities.CmfWorkoutGpsSample;
+import nodomain.freeyourgadget.gadgetbridge.entities.DaoSession;
+import nodomain.freeyourgadget.gadgetbridge.entities.Device;
+import nodomain.freeyourgadget.gadgetbridge.entities.User;
+import nodomain.freeyourgadget.gadgetbridge.export.AutoFitExporter;
+import nodomain.freeyourgadget.gadgetbridge.export.AutoGpxExporter;
+import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivityKind;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivityTrack;
+import nodomain.freeyourgadget.gadgetbridge.util.GB;
+
+public class CmfActivitySync {
+    private static final Logger LOG = LoggerFactory.getLogger(CmfActivitySync.class);
+
+    private final CmfWatchProSupport mSupport;
+
+    private final List<BaseActivitySummary> activitiesWithGps = new ArrayList<>();
+
+    protected CmfActivitySync(final CmfWatchProSupport support) {
+        this.mSupport = support;
+    }
+
+    protected boolean onCommand(final CmfCommand cmd, final byte[] payload) {
+        switch (cmd) {
+            case ACTIVITY_FETCH_ACK_1:
+                handleActivityFetchAck1(payload);
+                return true;
+            case ACTIVITY_FETCH_ACK_2:
+                handleActivityFetchAck2(payload);
+                return true;
+            case ACTIVITY_DATA:
+                handleActivityData(payload);
+                return true;
+            case HEART_RATE_MANUAL_AUTO:
+            case HEART_RATE_WORKOUT:
+                handleHeartRate(payload);
+                return true;
+            case HEART_RATE_RESTING:
+                handleHeartRateResting(payload);
+                return true;
+            case SLEEP_DATA:
+                handleSleepData(payload);
+                return true;
+            case STRESS:
+                handleStress(payload);
+                return true;
+            case SPO2:
+                handleSpo2(payload);
+                return true;
+            case WORKOUT_SUMMARY:
+                handleWorkoutSummary(payload, 1);
+                return true;
+            case WORKOUT_SUMMARY_V3:
+                handleWorkoutSummary(payload, 3);
+                return true;
+            case WORKOUT_GPS:
+                handleWorkoutGps(payload);
+                return true;
+        }
+
+        return false;
+    }
+
+    private void handleActivityFetchAck1(final byte[] payload) {
+        switch (payload[0]) {
+            case 0x01:
+                LOG.debug("Got activity fetch ack 1, starting step 2");
+                GB.updateTransferNotification(getContext().getString(R.string.busy_task_fetch_activity_data), "", true, 0, getContext());
+                getDevice().setBusyTask(R.string.busy_task_fetch_activity_data, getContext());
+                mSupport.sendCommand("fetch recorded data step 2", CmfCommand.ACTIVITY_FETCH_2, CmfWatchProSupport.A5);
+                break;
+            case 0x02:
+                LOG.debug("Got activity fetch finish");
+                // Process activities with GPS before unsetting device as busy
+                processActivitiesWithGps();
+                break;
+            default:
+                LOG.warn("Unknown activity fetch ack code {}", payload[0]);
+                return;
+        }
+
+        getDevice().sendDeviceUpdateIntent(getContext());
+    }
+
+    private static void handleActivityFetchAck2(final byte[] payload) {
+        final ByteBuffer buf = ByteBuffer.wrap(payload).order(ByteOrder.LITTLE_ENDIAN);
+
+        final int activityTs = buf.getInt();
+        final byte[] activityFlags = new byte[4]; // TODO what do they mean?
+        buf.order(ByteOrder.BIG_ENDIAN).get(activityFlags);
+        LOG.debug("Getting activity since {}, flags={}", activityTs, GB.hexdump(activityFlags));
+    }
+
+    private void handleActivityData(final byte[] payload) {
+        if (payload.length % 32 != 0) {
+            LOG.error("Activity data payload size {} not divisible by 32", payload.length);
+            return;
+        }
+
+        LOG.debug("Got {} activity samples", payload.length / 32);
+
+        final ByteBuffer buf = ByteBuffer.wrap(payload).order(ByteOrder.LITTLE_ENDIAN);
+
+        final List<CmfActivitySample> samples = new ArrayList<>();
+
+        while (buf.remaining() > 0) {
+            final CmfActivitySample sample = new CmfActivitySample();
+            sample.setTimestamp(buf.getInt());
+            sample.setSteps(buf.getInt());
+            sample.setDistance(buf.getInt());
+            sample.setCalories(buf.getInt());
+
+            final byte[] unk = new byte[16];
+            buf.get(unk);
+
+            samples.add(sample);
+        }
+
+        try (DBHandler handler = GBApplication.acquireDB()) {
+            final DaoSession session = handler.getDaoSession();
+
+            final Device device = DBHelper.getDevice(getDevice(), session);
+            final User user = DBHelper.getUser(session);
+
+            final CmfActivitySampleProvider sampleProvider = new CmfActivitySampleProvider(getDevice(), session);
+
+            for (final CmfActivitySample sample : samples) {
+                sample.setDevice(device);
+                sample.setUser(user);
+                sample.setProvider(sampleProvider);
+            }
+
+            LOG.debug("Will persist {} activity samples", samples.size());
+            sampleProvider.addGBActivitySamples(samples);
+        } catch (final Exception e) {
+            GB.toast(getContext(), "Error saving activity samples", Toast.LENGTH_LONG, GB.ERROR, e);
+        }
+    }
+
+    private void handleHeartRate(final byte[] payload) {
+        if (payload.length % 8 != 0) {
+            LOG.error("Heart rate payload size {} not divisible by 8", payload.length);
+            return;
+        }
+
+        LOG.debug("Got {} heart rate samples", payload.length / 8);
+
+        final ByteBuffer buf = ByteBuffer.wrap(payload).order(ByteOrder.LITTLE_ENDIAN);
+
+        final List<CmfHeartRateSample> samples = new ArrayList<>();
+
+        while (buf.remaining() > 0) {
+            final CmfHeartRateSample sample = new CmfHeartRateSample();
+            sample.setTimestamp(buf.getInt() * 1000L);
+            sample.setHeartRate(buf.getInt());
+
+            samples.add(sample);
+        }
+
+        try (DBHandler handler = GBApplication.acquireDB()) {
+            final DaoSession session = handler.getDaoSession();
+
+            final Device device = DBHelper.getDevice(getDevice(), session);
+            final User user = DBHelper.getUser(session);
+
+            final CmfHeartRateSampleProvider sampleProvider = new CmfHeartRateSampleProvider(getDevice(), session);
+
+            for (final CmfHeartRateSample sample : samples) {
+                sample.setDevice(device);
+                sample.setUser(user);
+            }
+
+            LOG.debug("Will persist {} heart rate samples", samples.size());
+            sampleProvider.addSamples(samples);
+        } catch (final Exception e) {
+            GB.toast(getContext(), "Error saving heart rate samples", Toast.LENGTH_LONG, GB.ERROR, e);
+        }
+    }
+
+    private static void handleHeartRateResting(final byte[] payload) {
+        // TODO persist resting HR samples;
+        LOG.warn("Persisting resting HR samples is not implemented");
+    }
+
+    private void handleSleepData(final byte[] payload) {
+        final ByteBuffer buf = ByteBuffer.wrap(payload).order(ByteOrder.LITTLE_ENDIAN);
+
+        LOG.debug("Got sleep data samples");
+
+        final int sessionTimestamp = buf.getInt();
+        final int wakeupTime = buf.getInt();
+        final byte[] metadata = new byte[10];
+        buf.get(metadata);
+
+        final CmfSleepSessionSample sessionSample = new CmfSleepSessionSample();
+        sessionSample.setTimestamp(sessionTimestamp * 1000L);
+        sessionSample.setWakeupTime(wakeupTime * 1000L);
+        sessionSample.setMetadata(metadata);
+
+        final List<CmfSleepStageSample> stageSamples = new ArrayList<>();
+
+        while (buf.remaining() > 0) {
+            final CmfSleepStageSample sample = new CmfSleepStageSample();
+            sample.setTimestamp(buf.getInt() * 1000L);
+            sample.setDuration(buf.getShort());
+            sample.setStage(buf.getShort());
+            stageSamples.add(sample);
+        }
+
+        try (DBHandler handler = GBApplication.acquireDB()) {
+            final DaoSession session = handler.getDaoSession();
+
+            final Device device = DBHelper.getDevice(getDevice(), session);
+            final User user = DBHelper.getUser(session);
+
+            final CmfSleepSessionSampleProvider sampleProvider = new CmfSleepSessionSampleProvider(getDevice(), session);
+
+            sessionSample.setDevice(device);
+            sessionSample.setUser(user);
+
+            LOG.debug("Will persist 1 sleep session sample from {} to {}", sessionSample.getTimestamp(), sessionSample.getWakeupTime());
+            sampleProvider.addSample(sessionSample);
+        } catch (final Exception e) {
+            GB.toast(getContext(), "Error saving sleep session sample", Toast.LENGTH_LONG, GB.ERROR, e);
+        }
+
+        try (DBHandler handler = GBApplication.acquireDB()) {
+            final DaoSession session = handler.getDaoSession();
+
+            final Device device = DBHelper.getDevice(getDevice(), session);
+            final User user = DBHelper.getUser(session);
+
+            final CmfSleepStageSampleProvider sampleProvider = new CmfSleepStageSampleProvider(getDevice(), session);
+
+            for (final CmfSleepStageSample sample : stageSamples) {
+                sample.setDevice(device);
+                sample.setUser(user);
+            }
+
+            LOG.debug("Will persist {} sleep stage samples", stageSamples.size());
+            sampleProvider.addSamples(stageSamples);
+        } catch (final Exception e) {
+            GB.toast(getContext(), "Error saving sleep samples", Toast.LENGTH_LONG, GB.ERROR, e);
+        }
+    }
+
+    private void handleStress(final byte[] payload) {
+        if (payload.length % 8 != 0) {
+            LOG.error("Stress payload size {} not divisible by 8", payload.length);
+            return;
+        }
+
+        LOG.debug("Got {} stress samples", payload.length / 8);
+
+        final ByteBuffer buf = ByteBuffer.wrap(payload).order(ByteOrder.LITTLE_ENDIAN);
+
+        final List<CmfStressSample> samples = new ArrayList<>();
+
+        while (buf.remaining() > 0) {
+            final CmfStressSample sample = new CmfStressSample();
+            sample.setTimestamp(buf.getInt() * 1000L);
+            sample.setStress(buf.getInt());
+
+            samples.add(sample);
+        }
+
+        try (DBHandler handler = GBApplication.acquireDB()) {
+            final DaoSession session = handler.getDaoSession();
+
+            final Device device = DBHelper.getDevice(getDevice(), session);
+            final User user = DBHelper.getUser(session);
+
+            final CmfStressSampleProvider sampleProvider = new CmfStressSampleProvider(getDevice(), session);
+
+            for (final CmfStressSample sample : samples) {
+                sample.setDevice(device);
+                sample.setUser(user);
+            }
+
+            LOG.debug("Will persist {} stress samples", samples.size());
+            sampleProvider.addSamples(samples);
+        } catch (final Exception e) {
+            GB.toast(getContext(), "Error saving stress samples", Toast.LENGTH_LONG, GB.ERROR, e);
+        }
+    }
+
+    private void handleSpo2(final byte[] payload) {
+        if (payload.length % 8 != 0) {
+            LOG.error("Spo2 payload size {} not divisible by 8", payload.length);
+            return;
+        }
+
+        LOG.debug("Got {} spo2 samples", payload.length / 8);
+
+        final ByteBuffer buf = ByteBuffer.wrap(payload).order(ByteOrder.LITTLE_ENDIAN);
+
+        final List<CmfSpo2Sample> samples = new ArrayList<>();
+
+        while (buf.remaining() > 0) {
+            final CmfSpo2Sample sample = new CmfSpo2Sample();
+            sample.setTimestamp(buf.getInt() * 1000L);
+            sample.setSpo2(buf.getInt());
+
+            samples.add(sample);
+        }
+
+        try (DBHandler handler = GBApplication.acquireDB()) {
+            final DaoSession session = handler.getDaoSession();
+
+            final Device device = DBHelper.getDevice(getDevice(), session);
+            final User user = DBHelper.getUser(session);
+
+            final CmfSpo2SampleProvider sampleProvider = new CmfSpo2SampleProvider(getDevice(), session);
+
+            for (final CmfSpo2Sample sample : samples) {
+                sample.setDevice(device);
+                sample.setUser(user);
+            }
+
+            LOG.debug("Will persist {} spo2 samples", samples.size());
+            sampleProvider.addSamples(samples);
+        } catch (final Exception e) {
+            GB.toast(getContext(), "Error saving spo2 samples", Toast.LENGTH_LONG, GB.ERROR, e);
+        }
+    }
+
+    private void handleWorkoutSummary(final byte[] payload, final int version) {
+        final int bytesPerWorkout;
+
+        if (version == 3) {
+            bytesPerWorkout = payload.length;
+        } else if (payload.length % 32 == 0) {
+            bytesPerWorkout = 32;
+        } else if (payload.length % 54 == 0) {
+            bytesPerWorkout = 54;
+        } else {
+            LOG.error("Workout summary payload size {} not divisible by 32/54", payload.length);
+            return;
+        }
+
+        LOG.debug("Got {} workout summary samples for version {}", payload.length / bytesPerWorkout, version);
+
+        final ByteBuffer buf = ByteBuffer.wrap(payload).order(ByteOrder.LITTLE_ENDIAN);
+
+        final CmfWorkoutSummaryParser summaryParser = new CmfWorkoutSummaryParser(getDevice(), getContext(), version);
+
+        while (buf.remaining() > 0) {
+            final byte[] summaryBytes = new byte[bytesPerWorkout];
+            buf.get(summaryBytes);
+
+            BaseActivitySummary summary = new BaseActivitySummary();
+            summary.setRawSummaryData(summaryBytes);
+            summary.setActivityKind(ActivityKind.UNKNOWN.getCode());
+
+            try {
+                summary = summaryParser.parseBinaryData(summary, true);
+            } catch (final Exception e) {
+                LOG.error("Failed to parse workout summary", e);
+                GB.toast(getContext(), "Failed to parse workout summary", Toast.LENGTH_LONG, GB.ERROR, e);
+                return;
+            }
+
+            if (summary == null) {
+                LOG.error("Workout summary is null");
+                return;
+            }
+
+            summary.setSummaryData(null); // remove json before saving to database
+
+            try (DBHandler dbHandler = GBApplication.acquireDB()) {
+                final DaoSession session = dbHandler.getDaoSession();
+                final Device device = DBHelper.getDevice(getDevice(), session);
+                final User user = DBHelper.getUser(session);
+
+                summary.setDevice(device);
+                summary.setUser(user);
+
+                LOG.debug("Persisting workout summary for {}", summary.getStartTime());
+
+                session.getBaseActivitySummaryDao().insertOrReplace(summary);
+            } catch (final Exception e) {
+                GB.toast(getContext(), "Error saving activity summary", Toast.LENGTH_LONG, GB.ERROR, e);
+                return;
+            }
+
+            // Assume all activities have GPS
+            activitiesWithGps.add(summary);
+        }
+    }
+
+    private void handleWorkoutGps(final byte[] payload) {
+        if (payload.length % 12 != 0) {
+            LOG.error("Workout gps payload size {} not divisible by 12", payload.length);
+            return;
+        }
+
+        LOG.debug("Got {} workout gps samples", payload.length / 12);
+
+        final ByteBuffer buf = ByteBuffer.wrap(payload).order(ByteOrder.LITTLE_ENDIAN);
+
+        final List<CmfWorkoutGpsSample> samples = new ArrayList<>();
+
+        while (buf.remaining() > 0) {
+            final CmfWorkoutGpsSample sample = new CmfWorkoutGpsSample();
+            sample.setTimestamp(buf.getInt() * 1000L);
+            sample.setLongitude(buf.getInt());
+            sample.setLatitude(buf.getInt());
+
+            samples.add(sample);
+        }
+
+        try (DBHandler handler = GBApplication.acquireDB()) {
+            final DaoSession session = handler.getDaoSession();
+
+            final Device device = DBHelper.getDevice(getDevice(), session);
+            final User user = DBHelper.getUser(session);
+
+            final CmfWorkoutGpsSampleProvider sampleProvider = new CmfWorkoutGpsSampleProvider(getDevice(), session);
+
+            for (final CmfWorkoutGpsSample sample : samples) {
+                sample.setDevice(device);
+                sample.setUser(user);
+            }
+
+            LOG.debug("Will persist {} workout gps samples", samples.size());
+            sampleProvider.addSamples(samples);
+        } catch (final Exception e) {
+            GB.toast(getContext(), "Error saving workout gps samples", Toast.LENGTH_LONG, GB.ERROR, e);
+        }
+    }
+
+    private void processActivitiesWithGps() {
+        LOG.debug("There are {} activities with gps to process", activitiesWithGps.size());
+
+        for (final BaseActivitySummary summary : activitiesWithGps) {
+            processGps(summary);
+        }
+
+        activitiesWithGps.clear();
+
+        getDevice().unsetBusyTask();
+        GB.signalActivityDataFinish(getDevice());
+        GB.updateTransferNotification(null, "", false, 100, getContext());
+    }
+
+    private void processGps(final BaseActivitySummary summary) {
+        final CmfActivityTrackProvider activityTrackProvider = new CmfActivityTrackProvider(getDevice());
+        final ActivityTrack activityTrack = activityTrackProvider.getActivityTrack(summary);
+        if (activityTrack == null) {
+            return;
+        }
+
+        final boolean hasGps = activityTrack.getAllPoints().stream()
+                .anyMatch(p -> p.getLocation() != null);
+
+        if (hasGps) {
+            // GPX needs at least one GPS-valid point; FIT can be emitted regardless.
+            AutoGpxExporter.doExport(getContext(), getDevice(), summary, activityTrack);
+        }
+        AutoFitExporter.doExport(getContext(), getDevice(), summary, activityTrack);
+    }
+
+    private Context getContext() {
+        return mSupport.getContext();
+    }
+
+    private GBDevice getDevice() {
+        return mSupport.getDevice();
+    }
+}
