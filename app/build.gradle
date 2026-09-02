@@ -152,7 +152,15 @@ android {
             }
         }
         release {
-            if (System.getProperty("release_store_file") != null) {
+            def keystorePropsFile = rootProject.file("keystore.properties")
+            if (keystorePropsFile.exists()) {
+                def keystoreProps = new Properties()
+                keystorePropsFile.withInputStream { keystoreProps.load(it) }
+                storeFile file(keystoreProps.getProperty("storeFile"))
+                storePassword keystoreProps.getProperty("storePassword")
+                keyAlias keystoreProps.getProperty("keyAlias")
+                keyPassword keystoreProps.getProperty("keyPassword")
+            } else if (System.getProperty("release_store_file") != null) {
                 storeFile file(System.getProperty("release_store_file"))
                 storePassword System.getProperty("release_store_password")
                 keyAlias System.getProperty("release_key_alias")
@@ -203,7 +211,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
-            if (System.getProperty("release_store_file") != null) {
+            if (rootProject.file("keystore.properties").exists() || System.getProperty("release_store_file") != null) {
                 signingConfig = signingConfigs.release
             }
         }

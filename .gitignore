@@ -75,3 +75,6 @@ app/.cxx/
 
 # Local scratch DB (not part of the app)
 todo.db
+
+# release signing secrets (never commit)
+keystore.properties
