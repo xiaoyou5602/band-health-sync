@@ -43,10 +43,10 @@ data class SelfHostedHealthPayloadSet(
  * which is the only genuinely unknown part of the direct-upload path.
  *
  * The server merges rather than overwrites: steps take the larger value, heart rate dedups on the
- * exact timestamp string, and sleep sessions dedup on a `end|duration_seconds` key. Steps and heart
- * rate are therefore safe to re-send, and this builder leans on that. Sleep is not: a session whose
- * span changes between syncs produces a *different* key and would be stored twice, so a session is
- * emitted at most once (see the settle rule in [build]).
+ * exact timestamp string, and overlapping sleep sessions keep the most complete span. Re-sending
+ * data is therefore safe, and this builder leans on that. The sleep cursor still avoids needless
+ * repeats; if a later fetch grows a night beyond the cursor, the corrected span is sent and replaces
+ * the shorter server copy (see the settle rule in [build]).
  */
 object SelfHostedHealthPayload {
     /**
@@ -57,11 +57,17 @@ object SelfHostedHealthPayload {
     const val HEART_RATE_BUCKET_SECONDS = 300L
 
     /**
-     * A sleep session is only uploaded once its end is this far behind the newest data we hold. A
-     * night that is still growing (the band delivers a fetch that stops mid-session) would otherwise
-     * be uploaded short, and the corrected longer version would land beside it under a new key.
+     * A sleep session is only uploaded once its end is this far behind the newest data we hold.
+     *
+     * The server now dedups sleep by overlapping span and keeps the most complete version, so a
+     * night re-sent after it grew overwrites the shorter one instead of landing beside it under a
+     * new key. This margin is therefore no longer what guards against the double count — it only
+     * holds back a night that is *still in progress* (a fetch that stopped mid-session, where the
+     * newest sample is itself the last sleep sample), so the server does not briefly show a
+     * half-night. Ten minutes clears normal end-of-night stirring while letting a finished night
+     * upload on the first fetch after waking, instead of waiting out the old half-hour.
      */
-    const val SLEEP_SETTLE_SECONDS = 30L * 60L
+    const val SLEEP_SETTLE_SECONDS = 10L * 60L
 
     private const val STAGE_DEEP = "deep"
     private const val STAGE_LIGHT = "light"

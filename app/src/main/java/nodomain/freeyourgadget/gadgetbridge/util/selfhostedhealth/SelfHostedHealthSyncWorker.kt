@@ -29,6 +29,8 @@ import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice
 import nodomain.freeyourgadget.gadgetbridge.model.ActivitySample
 import nodomain.freeyourgadget.gadgetbridge.util.GBPrefs
+import org.json.JSONException
+import org.json.JSONObject
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.ZoneId
@@ -77,6 +79,10 @@ class SelfHostedHealthSyncWorker(
         val zone = ZoneId.systemDefault()
         val now = System.currentTimeMillis() / 1000L
         val uploader = SelfHostedHealthUploader()
+        // "Upload now" sets this; event-driven and periodic runs leave it false.
+        val manual = inputData.getBoolean(INPUT_MANUAL, false)
+        // One entry per posted day, written to the sync log in a single batch at the end.
+        val logEntries = mutableListOf<SelfHostedHealthLogEntry>()
 
         var uploadedDays = 0
         var retryable = false
@@ -84,6 +90,7 @@ class SelfHostedHealthSyncWorker(
 
         for (device in devices) {
             val address = device.address
+            val deviceName = device.aliasOrName
             val cursor = prefs.getLong(cursorKey(address), 0L)
             val sleepCursor = prefs.getLong(sleepCursorKey(address), 0L)
             val windowStart = windowStart(prefs, cursor, now, zone)
@@ -109,7 +116,10 @@ class SelfHostedHealthSyncWorker(
 
             var allSucceeded = true
             for (day in payload.days) {
-                when (val result = uploader.upload(url, token, day.body.toString())) {
+                val result = uploader.upload(url, token, day.body.toString())
+                // Logged whether it succeeded or failed: the point of the log is to see the failures.
+                logEntries.add(logEntry(day, deviceName, url, manual, result))
+                when (result) {
                     is SelfHostedHealthUploadResult.Success -> uploadedDays++
                     is SelfHostedHealthUploadResult.Failure -> {
                         LOG.warn("Upload of {} failed: {}", day.date, result.message)
@@ -134,6 +144,8 @@ class SelfHostedHealthSyncWorker(
                 editor.apply()
             }
         }
+
+        SelfHostedHealthLog.append(applicationContext, logEntries)
 
         val timestamp = TIME_FORMAT.format(ZonedDateTime.ofInstant(Instant.ofEpochSecond(now), zone))
         if (failure == null) {
@@ -198,11 +210,48 @@ class SelfHostedHealthSyncWorker(
             .apply()
     }
 
+    private fun logEntry(
+        day: SelfHostedHealthDay,
+        deviceName: String,
+        url: String,
+        manual: Boolean,
+        result: SelfHostedHealthUploadResult
+    ): SelfHostedHealthLogEntry = SelfHostedHealthLogEntry(
+        timestampMs = System.currentTimeMillis(),
+        deviceName = deviceName,
+        url = url,
+        date = day.date,
+        manual = manual,
+        records = countRecords(day.body),
+        httpCode = result.httpCode,
+        responseTimeMs = result.responseTimeMs,
+        success = result is SelfHostedHealthUploadResult.Success,
+        message = (result as? SelfHostedHealthUploadResult.Failure)?.message,
+        payload = prettyPayload(day.body)
+    )
+
+    /** Steps count as one record; each heart-rate point and each sleep session counts on its own. */
+    private fun countRecords(body: JSONObject): Int {
+        var count = if (body.has("steps")) 1 else 0
+        count += body.optJSONArray("heart_rate")?.length() ?: 0
+        count += body.optJSONArray("sleep")?.length() ?: 0
+        return count
+    }
+
+    /** Pretty-printed for the detail screen; falls back to compact if indentation ever throws. */
+    private fun prettyPayload(body: JSONObject): String = try {
+        body.toString(2)
+    } catch (e: JSONException) {
+        body.toString()
+    }
+
     companion object {
         private val LOG = LoggerFactory.getLogger(SelfHostedHealthSyncWorker::class.java)
         private val TIME_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("MM-dd HH:mm")
 
         const val INPUT_DEVICE_ADDRESS = "device_address"
+        /** True when the run was started by the "Upload now" button, so the log can label it manual. */
+        const val INPUT_MANUAL = "manual"
         const val WORK_TAG = "SelfHostedHealthSyncWorker"
 
         /** Unique name for the optional periodic upload, so scheduling it twice just updates it. */
@@ -246,9 +295,10 @@ class SelfHostedHealthSyncWorker(
             LOG.info("Self-hosted health periodic upload scheduled every {} minute(s)", minutes)
         }
 
-        /** Stored cadence in minutes; 0 (the default) means the periodic safety net is off. */
+        /** Stored cadence in minutes; 30 by default, so a missed on-event upload still gets a retry.
+         *  0 means the user turned the periodic safety net off. */
         private fun intervalMinutes(prefs: GBPrefs): Int =
-            prefs.getString(GBPrefs.SELF_HOSTED_HEALTH_SYNC_INTERVAL, "0").orEmpty().toIntOrNull() ?: 0
+            prefs.getString(GBPrefs.SELF_HOSTED_HEALTH_SYNC_INTERVAL, "30").orEmpty().toIntOrNull() ?: 0
 
         /** Re-cover this much before the cursor, so data the band delivers late still gets sent. */
         private const val LOOK_BACK_SECONDS = 24L * 60L * 60L

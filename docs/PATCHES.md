@@ -97,10 +97,13 @@
     session 归到醒来日，时长不计清醒阶段，与应用内、设备卡片、小组件一致；
   - 时间戳一律带时区偏移的 ISO 8601，服务端不需要猜时区；
   - 上传游标按设备存偏好；失败不推进游标，`Result.retry()` 走 WorkManager 自带退避。
-- 幂等边界：服务端是合并不是覆盖——步数取较大值、心率按时间戳去重、睡眠按
-  `结束时间 + 时长` 去重。步数和心率因此可以安全重传，fork 侧刻意保留 24 小时回看窗口。
-  睡眠不行：同一晚跨两次同步长度变了就是另一个 key，会在服务端存成两条并重复计入汇总。
-  所以睡眠 session 只在「结束时间比我们手上最新样本早 30 分钟以上」时才上传，且只上传一次。
+  - 设置页可查看最近的上传日志、按结果筛选、查看完整 Payload 并复制；日志列表和详情页沿用
+    应用原生主题文字色、点击反馈与分隔线，不额外引入红绿状态色、圆角卡片或胶囊标签。
+- 幂等边界：服务端是合并不是覆盖——步数取较大值、心率按时间戳去重、睡眠按时间跨度重叠
+  判断同一晚并保留更完整版本。fork 侧保留 24 小时回看窗口和睡眠上传游标；同一晚后续变长时，
+  新结束时间会越过旧游标并重传，由服务端替换较短版本，不会重复计入汇总。
+- 睡眠 session 只在「结束时间比我们手上最新样本早 10 分钟以上」时上传。这段等待只用于避免
+  暂时展示仍在生长的半截睡眠，不再承担防重复职责；醒来后首次取得足够新的样本即可上传。
 - 需要 `android.permission.INTERNET`：上游在 `AndroidManifest.xml` 里用 `tools:node="remove"`
   主动摘掉了它，网络功能全部走独立的 Internet Helper App。走 Internet Helper 等于把刚踢掉的
   第二个 App 请回来，所以 fork 保留该权限。INTERNET 是安装期权限，用户侧不会多一次弹窗。
@@ -111,20 +114,26 @@
   - `app/src/main/java/nodomain/freeyourgadget/gadgetbridge/util/selfhostedhealth/SelfHostedHealthUploader.kt`
   - `app/src/main/java/nodomain/freeyourgadget/gadgetbridge/util/selfhostedhealth/SelfHostedHealthSyncWorker.kt`
   - `app/src/main/java/nodomain/freeyourgadget/gadgetbridge/activities/preferences/SelfHostedHealthPreferencesActivity.kt`
+  - `app/src/main/java/nodomain/freeyourgadget/gadgetbridge/activities/selfhostedhealth/`
   - `app/src/main/java/nodomain/freeyourgadget/gadgetbridge/externalevents/NewDataReceiver.java`
   - `app/src/main/java/nodomain/freeyourgadget/gadgetbridge/activities/SettingsActivity.java`
   - `app/src/main/java/nodomain/freeyourgadget/gadgetbridge/util/GBPrefs.java`
   - `app/src/main/AndroidManifest.xml`
   - `app/src/main/res/xml/selfhosted_health_preferences.xml`
+  - `app/src/main/res/layout/activity_selfhosted_health_log.xml`
+  - `app/src/main/res/layout/activity_selfhosted_health_log_detail.xml`
+  - `app/src/main/res/layout/item_selfhosted_health_log.xml`
   - `app/src/main/res/xml/preferences.xml`
   - `app/src/main/res/values/strings.xml`
   - `app/src/main/res/values-zh-rCN/strings.xml`
   - `app/src/test/java/nodomain/freeyourgadget/gadgetbridge/util/selfhostedhealth/SelfHostedHealthPayloadTest.java`
-- 验证：`SelfHostedHealthPayloadTest` 9 项通过；`assembleMainlineDebug` 通过，合并后的
+  - `app/src/test/java/nodomain/freeyourgadget/gadgetbridge/util/selfhostedhealth/SelfHostedHealthLogTest.java`
+- 验证：`SelfHostedHealthPayloadTest` 10 项、`SelfHostedHealthLogTest` 5 项通过；
+  `assembleMainlineDebug` 通过，合并后的
   manifest 确认带 INTERNET 且注册了新 Activity；构建产出的真实 payload 用 Node 回放进
   `mcp/health-server.js` 的 `mergeHealthData`，落盘结果正确（步数合计、心率分桶、睡眠归到
   醒来日、深/浅/REM 汇总非零），重复回放不产生重复记录。
-- 限制：尚未覆盖安装，未在实机验证真实手环数据、后台唤醒时机与设置界面观感。
+- 限制：同步日志原生样式调整已覆盖安装并通过启动与数据保留验收，页面视觉仍待人工确认。
 
 ### 连接时不下发未经用户设置的睡眠开关
 
@@ -159,7 +168,11 @@
     软件内点击该项进入心率页，设备卡片设置中的对应项目也显示为心率；
   - 今日小组件和软件内设备卡片的睡眠为 0 时都仍显示睡眠项；
   - 应用内日视图、周/月统计、设备卡片和今日小组件都先通过 `SleepAnalysis` 识别跨午夜的
-    完整 session，再按 session 结束日期（醒来日）归属；睡眠总时长不计清醒阶段。
+    完整 session，再按 session 结束日期（醒来日）归属；睡眠总时长不计清醒阶段；
+  - App 进程重建后，组件在系统 `onUpdate()` 或用户点击时重新注册
+    `ACTION_NEW_DATA` / `ACTION_DEVICE_CHANGED` 本地监听，继续跟随新数据与设备连接状态刷新；
+    多次更新不会重复注册，删除单个组件不会影响其他组件，最后一个组件移除时从同一个本地
+    广播管理器注销。
 - 覆盖区：
   - `app/src/main/java/nodomain/freeyourgadget/gadgetbridge/Widget.java`
   - `app/src/main/java/nodomain/freeyourgadget/gadgetbridge/adapter/GBDeviceAdapterv2.java`
@@ -171,9 +184,10 @@
   - `app/src/main/res/layout/device_itemv2.xml`
   - `app/src/main/res/xml/devicesettings_device_card_activity_card_preferences.xml`
   - `app/src/test/java/nodomain/freeyourgadget/gadgetbridge/WidgetTest.java`
+  - `app/src/test/java/nodomain/freeyourgadget/gadgetbridge/WidgetListenerTest.java`
   - `app/src/test/java/nodomain/freeyourgadget/gadgetbridge/activities/charts/SleepAnalysisTest.java`
   - `app/src/test/java/nodomain/freeyourgadget/gadgetbridge/model/DailyTotalsTest.java`
-- 验证：widget 与 `SleepAnalysis` 针对性单测通过。
+- 验证：widget、监听生命周期与 `SleepAnalysis` 针对性单测通过。
 
 ### 本地构建工具链
 

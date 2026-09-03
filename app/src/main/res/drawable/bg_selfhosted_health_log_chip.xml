@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pill background for the auto/manual chip on a sync-log row. Translucent grey so it reads on
+     both the light and dark card background without needing a per-theme colour. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="10dp" />
+    <solid android:color="#1F808080" />
+</shape>

@@ -16,6 +16,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.activities.preferences
 
+import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
 import android.view.View
@@ -25,6 +26,7 @@ import androidx.preference.ListPreference
 import androidx.preference.MultiSelectListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
+import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
@@ -32,6 +34,7 @@ import nodomain.freeyourgadget.gadgetbridge.GBApplication
 import nodomain.freeyourgadget.gadgetbridge.R
 import nodomain.freeyourgadget.gadgetbridge.activities.AbstractPreferenceFragment
 import nodomain.freeyourgadget.gadgetbridge.activities.AbstractSettingsActivityV2
+import nodomain.freeyourgadget.gadgetbridge.activities.selfhostedhealth.SelfHostedHealthLogActivity
 import nodomain.freeyourgadget.gadgetbridge.util.GB
 import nodomain.freeyourgadget.gadgetbridge.util.GBPrefs
 import nodomain.freeyourgadget.gadgetbridge.util.selfhostedhealth.SelfHostedHealthEndpoint
@@ -172,6 +175,12 @@ class SelfHostedHealthPreferencesActivity : AbstractSettingsActivityV2() {
                 val context = context ?: return@setOnPreferenceClickListener false
                 val request = OneTimeWorkRequest.Builder(SelfHostedHealthSyncWorker::class.java)
                     .addTag(SelfHostedHealthSyncWorker.WORK_TAG)
+                    // Tell the run it was hand-triggered so the sync log can label it "manual".
+                    .setInputData(
+                        Data.Builder()
+                            .putBoolean(SelfHostedHealthSyncWorker.INPUT_MANUAL, true)
+                            .build()
+                    )
                     .build()
                 WorkManager.getInstance(context).enqueueUniqueWork(
                     ONE_TIME_WORK_NAME,
@@ -179,6 +188,12 @@ class SelfHostedHealthPreferencesActivity : AbstractSettingsActivityV2() {
                     request
                 )
                 GB.toast(context, R.string.selfhosted_health_upload_started, Toast.LENGTH_SHORT, GB.INFO)
+                true
+            }
+
+            findPreference<Preference>(GBPrefs.SELF_HOSTED_HEALTH_LOG)?.setOnPreferenceClickListener {
+                val context = context ?: return@setOnPreferenceClickListener false
+                startActivity(Intent(context, SelfHostedHealthLogActivity::class.java))
                 true
             }
 

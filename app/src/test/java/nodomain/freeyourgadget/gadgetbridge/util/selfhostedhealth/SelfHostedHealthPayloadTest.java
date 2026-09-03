@@ -137,18 +137,26 @@ public class SelfHostedHealthPayloadTest {
     }
 
     /**
-     * The server dedups sleep on an "end + duration" key, so a night uploaded while it can still
-     * grow would be stored a second time under the corrected span and counted twice.
+     * A night whose newest data still sits inside the settle window may not be finished (the fetch
+     * could have stopped mid-session), so it is held back rather than posted as a half-night.
      */
     @Test
     public void sleepThatMayStillGrowIsHeldBack() {
-        // Newest sample sits 10 minutes past the session end, inside the settle window.
+        // Newest sample sits ~5 minutes past the session end, inside the 10-minute settle window.
         SelfHostedHealthPayloadSet payload =
-                SelfHostedHealthPayload.build(night(ts(2026, 9, 2, 2, 10)), ZONE, 0L, ts(2026, 9, 2, 2, 15));
+                SelfHostedHealthPayload.build(night(ts(2026, 9, 2, 2, 5)), ZONE, 0L, ts(2026, 9, 2, 2, 15));
 
         // The day is still posted for its steps; only the unsettled night is withheld.
         assertFalse(bodyFor(payload, "2026-09-02").has("sleep"));
         assertEquals(0L, payload.getSleepUploadedThrough());
+    }
+
+    @Test
+    public void sleepPastTenMinuteSettleWindowIsUploaded() {
+        SelfHostedHealthPayloadSet payload =
+                SelfHostedHealthPayload.build(night(ts(2026, 9, 2, 2, 11)), ZONE, 0L, ts(2026, 9, 2, 2, 15));
+
+        assertTrue(bodyFor(payload, "2026-09-02").has("sleep"));
     }
 
     @Test

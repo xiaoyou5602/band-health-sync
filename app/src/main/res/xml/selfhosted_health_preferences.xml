@@ -50,6 +50,13 @@
             android:title="@string/selfhosted_health_status_title"
             app:iconSpaceReserved="false" />
 
+        <Preference
+            android:icon="@drawable/ic_history"
+            android:key="selfhosted_health_log"
+            android:summary="@string/pref_selfhosted_health_log_summary"
+            android:title="@string/pref_selfhosted_health_log_title"
+            app:iconSpaceReserved="true" />
+
         <SwitchPreferenceCompat
             android:defaultValue="true"
             android:key="selfhosted_health_sync_on_event"
@@ -59,7 +66,7 @@
             app:iconSpaceReserved="false" />
 
         <ListPreference
-            android:defaultValue="0"
+            android:defaultValue="30"
             android:entries="@array/selfhosted_health_sync_interval"
             android:entryValues="@array/selfhosted_health_sync_interval_values"
             android:icon="@drawable/ic_access_time"

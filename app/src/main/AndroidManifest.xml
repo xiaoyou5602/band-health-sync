@@ -274,6 +274,14 @@
             android:label="@string/selfhosted_health_settings"
             android:parentActivityName=".activities.SettingsActivity" />
         <activity
+            android:name=".activities.selfhostedhealth.SelfHostedHealthLogActivity"
+            android:label="@string/selfhosted_health_log_title"
+            android:parentActivityName=".activities.preferences.SelfHostedHealthPreferencesActivity" />
+        <activity
+            android:name=".activities.selfhostedhealth.SelfHostedHealthLogDetailActivity"
+            android:label="@string/selfhosted_health_log_detail_title"
+            android:parentActivityName=".activities.selfhostedhealth.SelfHostedHealthLogActivity" />
+        <activity
             android:name=".activities.endurain.OnlineFitnessTrackersPreferencesActivity"
             android:label="@string/prefs_online_fitness_trackers_title"
             android:parentActivityName=".activities.SettingsActivity" />

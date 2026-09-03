@@ -144,6 +144,7 @@ public class GBPrefs extends Prefs {
     public static final String SELF_HOSTED_HEALTH_STATUS = "selfhosted_health_status";
     public static final String SELF_HOSTED_HEALTH_INITIAL_SYNC_TS = "selfhosted_health_initial_sync_ts";
     public static final String SELF_HOSTED_HEALTH_RESET_CURSOR = "selfhosted_health_reset_cursor";
+    public static final String SELF_HOSTED_HEALTH_LOG = "selfhosted_health_log";
 
     @Deprecated
     public GBPrefs(Prefs prefs) {

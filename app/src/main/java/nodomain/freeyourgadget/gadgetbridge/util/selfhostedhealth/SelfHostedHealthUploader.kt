@@ -29,10 +29,26 @@ import java.util.concurrent.TimeUnit
  *
  * [retryable] separates "the server said no" from "we could not reach it": a 4xx will fail again
  * with the same body and must not be retried forever, while a timeout or a 5xx usually will not.
+ *
+ * [httpCode] and [responseTimeMs] exist for the sync log: the code is 0 when the request never got
+ * an answer (it could not be built, or the connection failed), and the time is how long the call
+ * took wall-clock, 0 when nothing was sent.
  */
 sealed class SelfHostedHealthUploadResult {
-    object Success : SelfHostedHealthUploadResult()
-    data class Failure(val message: String, val retryable: Boolean) : SelfHostedHealthUploadResult()
+    abstract val httpCode: Int
+    abstract val responseTimeMs: Long
+
+    data class Success(
+        override val httpCode: Int,
+        override val responseTimeMs: Long
+    ) : SelfHostedHealthUploadResult()
+
+    data class Failure(
+        val message: String,
+        val retryable: Boolean,
+        override val httpCode: Int,
+        override val responseTimeMs: Long
+    ) : SelfHostedHealthUploadResult()
 }
 
 /**
@@ -45,6 +61,9 @@ class SelfHostedHealthUploader(
     private val client: OkHttpClient = defaultClient
 ) {
     fun upload(url: String, token: String, body: String): SelfHostedHealthUploadResult {
+        // Started before the request is even built so the "could not build it" path still reports a
+        // (tiny) time rather than a bogus one; reset once the call is actually about to go out.
+        var startNanos = System.nanoTime()
         return try {
             // Built inside the try on purpose: a token with a stray newline or a malformed URL makes
             // Request.Builder throw IllegalArgumentException (a header value cannot hold a control
@@ -56,9 +75,11 @@ class SelfHostedHealthUploader(
                 .post(body.toRequestBody(JSON))
                 .build()
 
+            startNanos = System.nanoTime()
             client.newCall(request).execute().use { response ->
+                val elapsedMs = elapsedMs(startNanos)
                 if (response.isSuccessful) {
-                    SelfHostedHealthUploadResult.Success
+                    SelfHostedHealthUploadResult.Success(response.code, elapsedMs)
                 } else {
                     // The server answers a rejected body with a plain { "error": ... }; carrying it
                     // into the settings screen is the difference between "it does not work" and
@@ -66,20 +87,35 @@ class SelfHostedHealthUploader(
                     val detail = summarizeErrorBody(response.body?.string())
                     SelfHostedHealthUploadResult.Failure(
                         "HTTP ${response.code}${if (detail.isEmpty()) "" else ": $detail"}",
-                        retryable = response.code >= 500 || response.code == 429
+                        retryable = response.code >= 500 || response.code == 429,
+                        httpCode = response.code,
+                        responseTimeMs = elapsedMs
                     )
                 }
             }
         } catch (e: IOException) {
             LOG.warn("Health upload to {} failed", url, e)
-            SelfHostedHealthUploadResult.Failure(e.message ?: e.javaClass.simpleName, retryable = true)
+            SelfHostedHealthUploadResult.Failure(
+                e.message ?: e.javaClass.simpleName,
+                retryable = true,
+                httpCode = 0,
+                responseTimeMs = elapsedMs(startNanos)
+            )
         } catch (e: IllegalArgumentException) {
             // A malformed URL or a token that still carries a control char after sanitizing: the
             // request could not even be built, so retrying the same inputs cannot help.
             LOG.warn("Could not build health upload request for {}", url, e)
-            SelfHostedHealthUploadResult.Failure(e.message ?: e.javaClass.simpleName, retryable = false)
+            SelfHostedHealthUploadResult.Failure(
+                e.message ?: e.javaClass.simpleName,
+                retryable = false,
+                httpCode = 0,
+                responseTimeMs = 0L
+            )
         }
     }
+
+    private fun elapsedMs(startNanos: Long): Long =
+        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos)
 
     companion object {
         private val LOG = LoggerFactory.getLogger(SelfHostedHealthUploader::class.java)

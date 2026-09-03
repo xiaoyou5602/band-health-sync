@@ -271,6 +271,11 @@ public class Widget extends AppWidgetProvider {
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
+        // onEnabled() is only called when the first widget is added. The static receiver is
+        // lost when the app process is recreated, so every system-driven widget update is also
+        // a recovery point for live device/data updates.
+        registerBroadcastReceiver(context);
+
         // There may be multiple widgets active, so update all of them
         for (int appWidgetId : appWidgetIds) {
             updateAppWidget(context, appWidgetManager, appWidgetId);
@@ -279,6 +284,10 @@ public class Widget extends AppWidgetProvider {
 
     @Override
     public void onEnabled(Context context) {
+        registerBroadcastReceiver(context);
+    }
+
+    private void registerBroadcastReceiver(Context context) {
         if (broadcastReceiver == null) {
             LOG.debug("gbwidget BROADCAST receiver initialized.");
             broadcastReceiver = new BroadcastReceiver() {
@@ -298,7 +307,8 @@ public class Widget extends AppWidgetProvider {
     @Override
     public void onDisabled(Context context) {
         if (broadcastReceiver != null) {
-            AndroidUtils.safeUnregisterBroadcastReceiver(context, broadcastReceiver);
+            AndroidUtils.safeUnregisterBroadcastReceiver(
+                    LocalBroadcastManager.getInstance(context), broadcastReceiver);
             broadcastReceiver = null;
         }
     }
@@ -317,13 +327,10 @@ public class Widget extends AppWidgetProvider {
 
         //this handles widget re-connection after apk updates
         if (WIDGET_CLICK.equals(intent.getAction())) {
-            if (broadcastReceiver == null) {
-                onEnabled(context);
-            }
-                refreshData(appWidgetId);
+            registerBroadcastReceiver(context);
+            refreshData(appWidgetId);
             //updateWidget();
         } else if (APPWIDGET_DELETED.equals(intent.getAction())) {
-            onDisabled(context);
             removeWidget(context, appWidgetId);
         }
     }

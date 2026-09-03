@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    tools:context=".activities.selfhostedhealth.SelfHostedHealthLogDetailActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Status -->
+        <TextView
+            style="@style/SelfHostedHealthLogFieldLabel"
+            android:layout_marginTop="0dp"
+            android:text="@string/selfhosted_health_log_field_status" />
+
+        <TextView
+            android:id="@+id/detailStatusText"
+            style="@style/SelfHostedHealthLogFieldValue"
+            tools:text="Success" />
+
+        <!-- URL -->
+        <TextView
+            style="@style/SelfHostedHealthLogFieldLabel"
+            android:text="@string/selfhosted_health_log_field_url" />
+
+        <TextView
+            android:id="@+id/detailUrl"
+            style="@style/SelfHostedHealthLogFieldValue"
+            tools:text="https://health.example.com/api/health" />
+
+        <!-- Timestamp -->
+        <TextView
+            style="@style/SelfHostedHealthLogFieldLabel"
+            android:text="@string/selfhosted_health_log_field_timestamp" />
+
+        <TextView
+            android:id="@+id/detailTimestamp"
+            style="@style/SelfHostedHealthLogFieldValue"
+            tools:text="2026-09-03 04:53:25" />
+
+        <!-- Status code -->
+        <TextView
+            style="@style/SelfHostedHealthLogFieldLabel"
+            android:text="@string/selfhosted_health_log_field_http_code" />
+
+        <TextView
+            android:id="@+id/detailHttpCode"
+            style="@style/SelfHostedHealthLogFieldValue"
+            tools:text="200" />
+
+        <!-- Response time -->
+        <TextView
+            style="@style/SelfHostedHealthLogFieldLabel"
+            android:text="@string/selfhosted_health_log_field_response_time" />
+
+        <TextView
+            android:id="@+id/detailResponseTime"
+            style="@style/SelfHostedHealthLogFieldValue"
+            tools:text="1649 ms" />
+
+        <!-- Sync type -->
+        <TextView
+            style="@style/SelfHostedHealthLogFieldLabel"
+            android:text="@string/selfhosted_health_log_field_sync_type" />
+
+        <TextView
+            android:id="@+id/detailSyncType"
+            style="@style/SelfHostedHealthLogFieldValue"
+            tools:text="Manual" />
+
+        <!-- Records -->
+        <TextView
+            style="@style/SelfHostedHealthLogFieldLabel"
+            android:text="@string/selfhosted_health_log_field_records" />
+
+        <TextView
+            android:id="@+id/detailRecords"
+            style="@style/SelfHostedHealthLogFieldValue"
+            tools:text="10" />
+
+        <!-- Device -->
+        <TextView
+            style="@style/SelfHostedHealthLogFieldLabel"
+            android:text="@string/selfhosted_health_log_field_device" />
+
+        <TextView
+            android:id="@+id/detailDevice"
+            style="@style/SelfHostedHealthLogFieldValue"
+            tools:text="喵喵喵" />
+
+        <!-- Error (only when the upload failed) -->
+        <LinearLayout
+            android:id="@+id/detailErrorContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <TextView
+                style="@style/SelfHostedHealthLogFieldLabel"
+                android:text="@string/selfhosted_health_log_field_error" />
+
+            <TextView
+                android:id="@+id/detailError"
+                style="@style/SelfHostedHealthLogFieldValue"
+                tools:text="HTTP 401: Unauthorized" />
+
+        </LinearLayout>
+
+        <!-- Payload -->
+        <TextView
+            style="@style/SelfHostedHealthLogFieldLabel"
+            android:text="@string/selfhosted_health_log_field_payload" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="4dp"
+            android:background="?attr/row_separator" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:scrollbars="horizontal">
+
+            <TextView
+                android:id="@+id/detailPayload"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:textIsSelectable="true"
+                android:textSize="12sp"
+                tools:text="{\n  &quot;date&quot;: &quot;2026-09-03&quot;\n}" />
+
+        </HorizontalScrollView>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?attr/row_separator" />
+
+    </LinearLayout>
+
+</ScrollView>

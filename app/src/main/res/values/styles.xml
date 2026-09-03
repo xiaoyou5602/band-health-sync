@@ -244,4 +244,21 @@
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_rowWeight">1</item>
     </style>
+
+    <!-- Field label/value pairs on the self-hosted health sync-log detail screen. -->
+    <style name="SelfHostedHealthLogFieldLabel">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:textColor">?attr/textColorSecondary</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="SelfHostedHealthLogFieldValue">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">2dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textIsSelectable">true</item>
+    </style>
 </resources>
