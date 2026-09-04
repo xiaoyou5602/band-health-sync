@@ -189,6 +189,24 @@
   - `app/src/test/java/nodomain/freeyourgadget/gadgetbridge/model/DailyTotalsTest.java`
 - 验证：widget、监听生命周期与 `SleepAnalysis` 针对性单测通过。
 
+### 首页切后台不再序列化共享缓存
+
+- 目的：修复打开 Dashboard 后切到其他应用时偶发的 `ConcurrentModificationException` 崩溃。
+- 根因：旧实现把正在由多个卡片后台任务写入的 `DashboardData` 整体放进 Fragment saved state；
+  Android 在 `ControlCenterv2` 停止时序列化其中的 `generalizedActivities`，可能与 Today 卡片的
+  清空／追加撞在一起。
+- 行为：
+  - `DashboardFragment` 只保存当前日期，不再保存整份运行中缓存；
+  - `DashboardData` 只携带日期范围、设备筛选等查询参数；
+  - 每张卡片在自己的后台任务中计算数据，再把独立结果交回主线程绘制；
+  - Today 卡片不再从后台线程修改共享、可序列化的活动列表。
+- 来源：选择性回移上游 commit `0e598a9a1`（`Dashboard: Refactor away cached values from
+  DashboardData`）。
+- 覆盖区：`DashboardFragment`、`activities/dashboard/` 下 24 个 Dashboard 文件、
+  `DashboardUtils`，并移除已不再使用的 `CachedValue`。
+- 验证：崩溃路径静态检查、针对性单测和 release 构建通过；真机两次冷启动后从首页切到桌面，
+  `onStop` 正常、进程继续存活，安装时间窗内无新崩溃。
+
 ### 本地构建工具链
 
 - 目的：使项目在当前 Windows/JDK 17/Android SDK 37 环境可重复构建。
