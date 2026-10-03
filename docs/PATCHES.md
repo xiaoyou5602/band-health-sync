@@ -163,13 +163,16 @@
   - 触发点复用 `ACTION_NEW_DATA` 与已有的 10 秒防抖（`NewDataReceiver`），不新增事件源；
   - 步数按本地日汇总为当日总数；心率按 5 分钟分桶取均值；睡眠按 `SleepAnalysis` 的
     session 归到醒来日，时长不计清醒阶段，与应用内、设备卡片、小组件一致；
+  - 运动摘要使用独立开关、默认关闭；只有明确打开后才读取 Huawei 已有运动汇总，并只上传
+    类型、时间、时长、距离、热量和汇总心率，不读取或发送路线、位置、设备地址与自由文本；
+    单条异常运动会单独跳过，整个运动读取失败时仍发送原有步数、心率和睡眠 payload；
   - 时间戳一律带时区偏移的 ISO 8601，服务端不需要猜时区；
   - 上传游标按设备存偏好；失败不推进游标，`Result.retry()` 走 WorkManager 自带退避。
   - 设置页可查看最近的上传日志、按结果筛选、查看完整 Payload 并复制；日志列表和详情页沿用
     应用原生主题文字色、点击反馈与分隔线，不额外引入红绿状态色、圆角卡片或胶囊标签。
 - 幂等边界：服务端是合并不是覆盖——步数取较大值、心率按时间戳去重、睡眠按时间跨度重叠
-  判断同一晚并保留更完整版本。fork 侧保留 24 小时回看窗口和睡眠上传游标；同一晚后续变长时，
-  新结束时间会越过旧游标并重传，由服务端替换较短版本，不会重复计入汇总。
+  判断同一晚并保留更完整版本，运动摘要按稳定 ID 更新。fork 侧保留 24 小时回看窗口和睡眠上传
+  游标；同一晚后续变长时，新结束时间会越过旧游标并重传，由服务端替换较短版本，不会重复计入汇总。
 - 睡眠 session 只在「结束时间比我们手上最新样本早 10 分钟以上」时上传。这段等待只用于避免
   暂时展示仍在生长的半截睡眠，不再承担防重复职责；醒来后首次取得足够新的样本即可上传。
 - 需要 `android.permission.INTERNET`：上游在 `AndroidManifest.xml` 里用 `tools:node="remove"`
@@ -179,6 +182,9 @@
   防火墙默认 BLOCK，不构成放宽）。
 - 覆盖区：
   - `app/src/main/java/nodomain/freeyourgadget/gadgetbridge/util/selfhostedhealth/SelfHostedHealthPayload.kt`
+  - `app/src/main/java/nodomain/freeyourgadget/gadgetbridge/util/selfhostedhealth/SelfHostedWorkoutPayload.kt`
+  - `app/src/main/java/nodomain/freeyourgadget/gadgetbridge/util/selfhostedhealth/SelfHostedWorkoutReader.kt`
+  - `app/src/main/java/nodomain/freeyourgadget/gadgetbridge/util/selfhostedhealth/SelfHostedWorkoutSync.kt`
   - `app/src/main/java/nodomain/freeyourgadget/gadgetbridge/util/selfhostedhealth/SelfHostedHealthUploader.kt`
   - `app/src/main/java/nodomain/freeyourgadget/gadgetbridge/util/selfhostedhealth/SelfHostedHealthSyncWorker.kt`
   - `app/src/main/java/nodomain/freeyourgadget/gadgetbridge/activities/preferences/SelfHostedHealthPreferencesActivity.kt`
@@ -196,7 +202,8 @@
   - `app/src/main/res/values-zh-rCN/strings.xml`
   - `app/src/test/java/nodomain/freeyourgadget/gadgetbridge/util/selfhostedhealth/SelfHostedHealthPayloadTest.java`
   - `app/src/test/java/nodomain/freeyourgadget/gadgetbridge/util/selfhostedhealth/SelfHostedHealthLogTest.java`
-- 验证：`SelfHostedHealthPayloadTest` 10 项、`SelfHostedHealthLogTest` 5 项通过；
+- 验证：`SelfHosted*` 定向单测 42 项通过，其中运动摘要覆盖默认关闭、明确开启、逐条异常隔离、
+  整体失败回退、隐私白名单、稳定 ID 和空值语义；
   `assembleMainlineDebug` 通过，合并后的
   manifest 确认带 INTERNET 且注册了新 Activity；构建产出的真实 payload 用 Node 回放进
   `mcp/health-server.js` 的 `mergeHealthData`，落盘结果正确（步数合计、心率分桶、睡眠归到

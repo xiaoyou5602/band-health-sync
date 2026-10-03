@@ -244,11 +244,12 @@ class SelfHostedHealthSyncWorker(
         payload = prettyPayload(day.body)
     )
 
-    /** Steps count as one record; each heart-rate point and each sleep session counts on its own. */
+    /** Steps count as one record; each heart-rate point, sleep session and workout counts on its own. */
     private fun countRecords(body: JSONObject): Int {
         var count = if (body.has("steps")) 1 else 0
         count += body.optJSONArray("heart_rate")?.length() ?: 0
         count += body.optJSONArray("sleep")?.length() ?: 0
+        count += body.optJSONArray("workouts")?.length() ?: 0
         return count
     }
 
