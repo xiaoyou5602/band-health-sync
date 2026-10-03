@@ -4266,6 +4266,8 @@
     <string name="pref_selfhosted_health_token_set">已设置</string>
     <string name="pref_selfhosted_health_token_not_set">未设置</string>
     <string name="pref_selfhosted_health_sync_on_event_title">取数后立即上传</string>
+    <string name="pref_selfhosted_health_workouts_title">上传运动摘要</string>
+    <string name="pref_selfhosted_health_workouts_summary">附加运动摘要，不含路线或位置数据。默认关闭；步数、心率和睡眠独立上传。</string>
     <string name="pref_selfhosted_health_sync_on_event_summary">手环送来新数据就上传，不用等下一次取数</string>
     <string name="pref_selfhosted_health_sync_interval_title">周期上传</string>
     <string name="selfhosted_health_sync_interval_off">关闭</string>

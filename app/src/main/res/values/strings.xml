@@ -5067,6 +5067,8 @@
     <string name="pref_selfhosted_health_token_set">Set</string>
     <string name="pref_selfhosted_health_token_not_set">Not set</string>
     <string name="pref_selfhosted_health_sync_on_event_title">Upload after each fetch</string>
+    <string name="pref_selfhosted_health_workouts_title">Upload workout summaries</string>
+    <string name="pref_selfhosted_health_workouts_summary">Include workout summaries without routes or location data. Off by default; steps, heart rate and sleep upload independently.</string>
     <string name="pref_selfhosted_health_sync_on_event_summary">Upload as soon as the band delivers new data, instead of waiting for the next fetch</string>
     <string name="pref_selfhosted_health_sync_interval_title">Periodic upload</string>
     <string name="selfhosted_health_sync_interval_off">Off</string>

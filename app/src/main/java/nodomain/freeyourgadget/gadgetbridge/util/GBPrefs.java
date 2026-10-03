@@ -133,6 +133,7 @@ public class GBPrefs extends Prefs {
     // Self-hosted health sync (toge's fork): posts samples straight to the user's own server,
     // so neither Health Connect nor a third-party webhook app is needed for that destination.
     public static final String SELF_HOSTED_HEALTH_ENABLED = "selfhosted_health_enabled";
+    public static final String SELF_HOSTED_HEALTH_WORKOUTS_ENABLED = "selfhosted_health_workouts_enabled";
     public static final String SELF_HOSTED_HEALTH_URL = "selfhosted_health_url";
     public static final String SELF_HOSTED_HEALTH_TOKEN = "selfhosted_health_token";
     public static final String SELF_HOSTED_HEALTH_DEVICE_SELECTION = "selfhosted_health_devices_multiselect";

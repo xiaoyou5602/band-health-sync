@@ -65,6 +65,14 @@
             android:title="@string/pref_selfhosted_health_sync_on_event_title"
             app:iconSpaceReserved="false" />
 
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="selfhosted_health_workouts_enabled"
+            android:layout="@layout/preference_checkbox"
+            android:summary="@string/pref_selfhosted_health_workouts_summary"
+            android:title="@string/pref_selfhosted_health_workouts_title"
+            app:iconSpaceReserved="false" />
+
         <ListPreference
             android:defaultValue="30"
             android:entries="@array/selfhosted_health_sync_interval"
