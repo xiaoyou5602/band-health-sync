@@ -15,19 +15,19 @@ class HuaweiSyncState {
     private final HuaweiSupportProvider supportProvider;
     private final List<Integer> syncQueue = new ArrayList<>(2);
 
-    private boolean activitySync = false;
-    private boolean heartRateSync = false;
-    private boolean p2pSync = false;
-    private boolean stressSync = false;
-    private boolean ecgSync = false;
-    private boolean workoutSync = false;
-    private int workoutGpsDownload = 0;
+    private volatile boolean activitySync = false;
+    private volatile boolean heartRateSync = false;
+    private volatile boolean p2pSync = false;
+    private volatile boolean stressSync = false;
+    private volatile boolean ecgSync = false;
+    private volatile boolean workoutSync = false;
+    private volatile int workoutGpsDownload = 0;
 
     public HuaweiSyncState(HuaweiSupportProvider supportProvider) {
         this.supportProvider = supportProvider;
     }
 
-    private boolean isSyncActive() {
+    synchronized boolean isSyncActive() {
         return activitySync || heartRateSync || p2pSync || stressSync || ecgSync || workoutSync || workoutGpsDownload != 0;
     }
 
@@ -194,6 +194,9 @@ class HuaweiSyncState {
     }
 
     public void updateState(boolean needSync) {
+        if (supportProvider.isDisposed()) {
+            return;
+        }
         if (!isSyncActive()) {
             if (supportProvider.getDevice().isBusy()) {
                 supportProvider.getDevice().unsetBusyTask();

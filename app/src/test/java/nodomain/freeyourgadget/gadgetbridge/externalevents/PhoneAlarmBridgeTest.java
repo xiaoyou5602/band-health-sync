@@ -111,6 +111,57 @@ public class PhoneAlarmBridgeTest {
         assertFalse(bridge.isNotificationTracked("next"));
     }
 
+    @Test
+    public void deviceActionsUseMatchingLiveSessionAndAreDeduplicated() {
+        final int[] calls = {0, 0};
+        bridge.updateSource(null, "notification:key", "clock", true, true);
+        bridge.setNotificationActions("key", () -> { calls[0]++; return true; }, () -> { calls[1]++; return true; });
+        assertFalse(bridge.onDeviceAction(99, 2));
+        assertFalse(bridge.onDeviceAction(42, 9));
+        assertTrue(bridge.onDeviceAction(42, 2));
+        assertFalse(bridge.onDeviceAction(42, 2));
+        assertFalse(bridge.onDeviceAction(42, 1));
+        assertEquals(1, calls[0]);
+        assertEquals(0, calls[1]);
+        assertEquals(0, dispatcher.stopCount);
+        bridge.onNotificationRemoved("key");
+        scheduler.runAll();
+        assertEquals(1, dispatcher.stopCount);
+        bridge.updateSource(null, "notification:next", "clock", true, true);
+        bridge.setNotificationActions("next", () -> false, () -> { calls[1]++; return true; });
+        assertTrue(bridge.onDeviceAction(42, 1));
+        assertEquals(1, calls[1]);
+    }
+
+    @Test
+    public void removedOrReplacedNotificationsCannotInvokeOldActions() {
+        bridge.updateSource(null, "notification:old", "clock", true, true);
+        bridge.setNotificationActions("old", () -> { throw new AssertionError("stale action"); }, () -> false);
+        bridge.onNotificationRemoved("old");
+        assertFalse(bridge.onDeviceAction(42, 2));
+        bridge.updateSource(null, "notification:new", "clock", true, true);
+        bridge.setNotificationActions("new", () -> true, () -> true);
+        assertTrue(bridge.onDeviceAction(42, 2));
+        bridge.reset();
+        assertFalse(bridge.onDeviceAction(42, 2));
+    }
+
+    @Test
+    public void ambiguousOrUnavailableActionsAreNotSent() {
+        bridge.updateSource(null, "notification:first", "clock", true, true);
+        bridge.setNotificationActions("first", () -> true, () -> true);
+        bridge.updateSource(null, "notification:second", "clock", true, true);
+        bridge.setNotificationActions("second", () -> true, () -> true);
+        assertFalse(bridge.onDeviceAction(42, 2));
+        bridge.onNotificationRemoved("second");
+        bridge.setNotificationActions("first", () -> false, () -> false);
+        assertFalse(bridge.onDeviceAction(42, 2));
+        bridge.setNotificationActions("first", () -> true, () -> true);
+        assertTrue(bridge.onDeviceAction(42, 2));
+        bridge.onEnabledChanged(false);
+        assertFalse(bridge.onDeviceAction(42, 1));
+    }
+
     private static final class FakeDispatcher implements PhoneAlarmBridge.AlarmDispatcher {
         private int startCount;
         private int stopCount;

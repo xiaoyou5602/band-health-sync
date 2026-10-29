@@ -1511,6 +1511,9 @@ public class HuaweiSupportProvider {
     }
 
     protected void fetchRecodedDataFromQueue() {
+        if (disposed) {
+            return;
+        }
         int dataType = this.syncState.getCurrentSyncType();
         if (dataType == -1)
             return; // Empty queue
@@ -1526,6 +1529,7 @@ public class HuaweiSupportProvider {
         // Only run the sync if accepted by the sync manager
         if (!syncState.startActivitySync())
             return;
+        armSyncTimeout();
         fetchActivityDataP2P();
 
         int sleepStart = 0;
@@ -1701,6 +1705,7 @@ public class HuaweiSupportProvider {
     private void fetchWorkoutData() {
         if (!syncState.startWorkoutSync())
             return;
+        armSyncTimeout();
 
         huaweiWorkoutSyncManager.performSync(new HuaweiWorkoutSyncManager.WorkoutSyncCallback() {
             @Override
@@ -1793,6 +1798,17 @@ public class HuaweiSupportProvider {
             return;
         }
         huaweiNotificationsManager.onDeleteNotification(id);
+    }
+
+    public void onPhoneAlarmAction(final int action) {
+        final Integer notificationId;
+        synchronized (this) {
+            if (getDevice().getType() != DeviceType.HUAWEIBAND10) return;
+            notificationId = activePhoneAlarmNotificationId;
+        }
+        if (notificationId != null) {
+            PhoneAlarmBridge.getInstance().onDeviceAction(notificationId, action);
+        }
     }
 
     private synchronized void dismissActivePhoneAlarm(final String reason) {
@@ -2740,6 +2756,7 @@ public class HuaweiSupportProvider {
         if (!syncState.startHeartRateSync()) {
             return false;
         }
+        armSyncTimeout();
 
         final int end = (int) (System.currentTimeMillis() / 1000L);
         final int latestHeartRateBefore = getLatestHeartRateTimestamp();
@@ -2831,7 +2848,49 @@ public class HuaweiSupportProvider {
         }
     }
 
+    private volatile boolean disposed;
+    private static final long SYNC_IDLE_TIMEOUT_MS = 5 * 60_000L;
+    private final Runnable syncTimeout = () -> {
+        if (disposed || !syncState.isSyncActive() || leSupport == null) {
+            return;
+        }
+        LOG.warn("Huawei sync made no protocol progress for five minutes; closing stalled connection");
+        // Close the transport before replacing state, so delayed packets cannot be mistaken for
+        // replies to a new sync. This does not remove either Bluetooth or companion associations.
+        dispose();
+        leSupport.disconnect();
+        if (leSupport.getAutoReconnect()) {
+            leSupport.connect();
+        }
+    };
+
+    private void armSyncTimeout() {
+        if (!disposed && leSupport != null) {
+            handler.removeCallbacks(syncTimeout);
+            handler.postDelayed(syncTimeout, SYNC_IDLE_TIMEOUT_MS);
+        }
+    }
+
+    void onSyncProtocolProgress(int serviceId, int commandId) {
+        // Ignore unrelated battery, notifications and OTA traffic: it does not prove sync progress.
+        boolean historyReply = serviceId == 0x07 && commandId >= 0x0a && commandId <= 0x0d;
+        if (syncState.isSyncActive() && (historyReply || serviceId == 0x0a
+                || serviceId == 0x2c || serviceId == 0x34 || serviceId == 0x17)) {
+            armSyncTimeout();
+        }
+    }
+
+    public boolean isDisposed() {
+        return disposed;
+    }
+
     public void dispose() {
+        if (disposed) {
+            return;
+        }
+        disposed = true;
+        handler.removeCallbacks(syncTimeout);
+        responseManager.cancelAll();
         dismissActivePhoneAlarm("Huawei support disposed");
         heartRateSyncScheduler.stop();
         stopBatteryRunnerDelayed();

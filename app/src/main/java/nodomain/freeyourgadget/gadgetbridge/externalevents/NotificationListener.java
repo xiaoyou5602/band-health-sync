@@ -1197,6 +1197,15 @@ public class NotificationListener extends NotificationListenerService {
                 isCountdownTimer
         );
         bridge.onNotificationChanged(this, sbn.getKey(), sbn.getPackageName(), ringing);
+        final android.app.PendingIntent[] actions = ringing
+                ? HyperOsAlarmActions.find(sbn.getPackageName(), channelId, notification) : null;
+        if (actions != null) {
+            final android.app.PendingIntent dismiss = actions[0];
+            final android.app.PendingIntent snooze = actions[1];
+            bridge.setNotificationActions(sbn.getKey(), () -> sendClockAlarmAction(dismiss), () -> sendClockAlarmAction(snooze));
+        } else {
+            bridge.setNotificationActions(sbn.getKey(), null, null);
+        }
         // Alarm notifications are handled only by the bridge. This keeps future-alarm and
         // timer status notifications from leaking into the ordinary notification path.
         return true;
@@ -1218,6 +1227,16 @@ public class NotificationListener extends NotificationListenerService {
             bridge.onNotificationRemoved(sbn.getKey());
         }
         return handled;
+    }
+
+    private static boolean sendClockAlarmAction(android.app.PendingIntent action) {
+        try {
+            action.send();
+            return true;
+        } catch (android.app.PendingIntent.CanceledException | SecurityException e) {
+            LOG.warn("Clock alarm action could not be sent", e);
+            return false;
+        }
     }
 
     private static boolean hasAlarmUsage(final AudioAttributes audioAttributes) {

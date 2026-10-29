@@ -114,6 +114,16 @@ public class Request {
     private final Handler handler;
     private final Runnable timeoutRunner;
     private Integer timeout = null;
+    private volatile boolean cancelled;
+
+    public void cancel() {
+        cancelled = true;
+        handler.removeCallbacks(timeoutRunner);
+    }
+
+    private boolean isCancelled() {
+        return cancelled || supportProvider.isDisposed();
+    }
 
     public static class RequestCallback {
         protected HuaweiSupportProvider support = null;
@@ -140,7 +150,12 @@ public class Request {
 
     private Runnable getTimeoutRunnable() {
         return () -> {
+            if (isCancelled()) {
+                return;
+            }
             LOG.debug("Timeout on Service {} command {}", Integer.toHexString(this.serviceId & 0xff), Integer.toHexString(this.commandId & 0xff));
+            // A late response must not complete the same request again after its timeout callback.
+            supportProvider.removeInProgressRequests(this);
             if (finalizeReq != null)
                 finalizeReq.timeout(this);
             else
@@ -192,6 +207,9 @@ public class Request {
     }
 
     public void doPerform() throws IOException {
+        if (isCancelled()) {
+            return;
+        }
         if (!requestSupported()) {
             this.handleNext();
             return;
@@ -240,6 +258,9 @@ public class Request {
     protected void processResponse() throws ResponseParseException {}
 
     public void handleResponse() {
+        if (isCancelled()) {
+            return;
+        }
         // Stop timeout timer
         this.handler.removeCallbacks(this.timeoutRunner);
 
@@ -262,6 +283,9 @@ public class Request {
     }
 
     public void handleNext() {
+        if (isCancelled()) {
+            return;
+        }
         if (nextRequest != null && !stopChain) {
             try {
                 nextRequest.doPerform();
@@ -313,6 +337,9 @@ public class Request {
      * @return True if this request handles this response, false otherwise
      */
     public boolean handleResponse(HuaweiPacket response) {
+        if (isCancelled()) {
+            return false;
+        }
         if (response.serviceId == serviceId && response.commandId == commandId) {
             receivedPacket = response;
             return true;

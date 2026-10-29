@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation" tools:language="en">
+    <string name="companion_pairing_bind">Bind as companion device</string>
+    <string name="companion_pairing_bound">Bound as companion device</string>
+    <string name="companion_pairing_failed">Companion binding failed. Please try again with the device nearby.</string>
     <string name="application_name_generic">Gadgetbridge</string>
     <string name="title_activity_controlcenter_generic">Gadgetbridge</string>
     <string name="about_activity_title_generic">About Gadgetbridge</string>

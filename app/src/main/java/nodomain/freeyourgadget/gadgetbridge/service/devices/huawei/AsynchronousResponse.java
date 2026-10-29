@@ -46,6 +46,8 @@ import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventCameraRemo
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventFindPhone;
 import nodomain.freeyourgadget.gadgetbridge.deviceevents.GBDeviceEventMusicControl;
 import nodomain.freeyourgadget.gadgetbridge.devices.huawei.HuaweiPacket;
+import nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.Alarms;
+import nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.PhoneAlarm;
 import nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.App;
 import nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.Calls;
 import nodomain.freeyourgadget.gadgetbridge.devices.huawei.packets.CameraRemote;
@@ -118,6 +120,10 @@ public class AsynchronousResponse {
 
         try {
             handleFindPhone(response);
+            if (response.serviceId == Alarms.id && response.commandId == PhoneAlarm.Dismiss.COMMAND_ID) {
+                final int action = PhoneAlarm.readAction(response.getTlv());
+                if (action != 0) support.onPhoneAlarmAction(action);
+            }
             handleMusicControls(response);
             handleCallControls(response);
             handlePhoneInfo(response);

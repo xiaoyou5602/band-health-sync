@@ -51,10 +51,9 @@ public class GBCompanionDeviceService extends CompanionDeviceService {
     @DeprecatedSinceApi(api = Build.VERSION_CODES.TIRAMISU)
     @Override
     public void onDeviceAppeared(@NonNull String address) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            LOG.debug("observed device {} via onDeviceAppeared(old {})", address, Build.VERSION.SDK_INT);
-            BluetoothConnectReceiver.observedDevice(address);
-        }
+        // The callback follows the observation API used to register, not just the OS version.
+        LOG.debug("observed device {} via onDeviceAppeared(old {})", address, Build.VERSION.SDK_INT);
+        BluetoothConnectReceiver.observedDevice(address);
     }
 
     @DeprecatedSinceApi(api = Build.VERSION_CODES.TIRAMISU)
@@ -67,13 +66,12 @@ public class GBCompanionDeviceService extends CompanionDeviceService {
     @DeprecatedSinceApi(api = Build.VERSION_CODES.BAKLAVA)
     @Override
     public void onDeviceAppeared(@NonNull AssociationInfo associationInfo) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) {
-            MacAddress mac = associationInfo.getDeviceMacAddress();
-            if (mac != null) {
-                String address = mac.toString();
-                LOG.debug("observed device {} via onDeviceAppeared(new {})", address, Build.VERSION.SDK_INT);
-                BluetoothConnectReceiver.observedDevice(address);
-            }
+        // startObservingDevicePresence(String) still uses this callback on Android 16.
+        MacAddress mac = associationInfo.getDeviceMacAddress();
+        if (mac != null) {
+            String address = mac.toString();
+            LOG.debug("observed device {} via onDeviceAppeared(new {})", address, Build.VERSION.SDK_INT);
+            BluetoothConnectReceiver.observedDevice(address);
         }
     }
 

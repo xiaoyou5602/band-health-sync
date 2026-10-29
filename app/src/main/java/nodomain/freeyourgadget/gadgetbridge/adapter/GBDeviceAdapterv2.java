@@ -23,6 +23,8 @@ import static nodomain.freeyourgadget.gadgetbridge.model.DeviceService.ACTION_CO
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.companion.CompanionDeviceManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -104,6 +106,7 @@ import nodomain.freeyourgadget.gadgetbridge.BuildConfig;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.DeviceDeleteActivity;
+import nodomain.freeyourgadget.gadgetbridge.activities.CompanionPairingFragment;
 import nodomain.freeyourgadget.gadgetbridge.activities.workouts.WorkoutListActivity;
 import nodomain.freeyourgadget.gadgetbridge.activities.BatteryInfoActivity;
 import nodomain.freeyourgadget.gadgetbridge.activities.ConfigureAlarms;
@@ -132,6 +135,7 @@ import nodomain.freeyourgadget.gadgetbridge.model.DailyTotals;
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceType;
 import nodomain.freeyourgadget.gadgetbridge.model.RecordedDataTypes;
 import nodomain.freeyourgadget.gadgetbridge.util.DateTimeUtils;
+import nodomain.freeyourgadget.gadgetbridge.util.BondingUtil;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 import nodomain.freeyourgadget.gadgetbridge.util.GBPrefs;
 import nodomain.freeyourgadget.gadgetbridge.util.StringUtils;
@@ -917,6 +921,21 @@ public class GBDeviceAdapterv2 extends ListAdapter<GBDevice, GBDeviceAdapterv2.V
         PopupMenu menu = new PopupMenu(v.getContext(), v);
         menu.inflate(R.menu.fragment_devices_device_submenu);
 
+        final MenuItem companionItem = menu.getMenu().findItem(R.id.controlcenter_device_submenu_pair_companion);
+        companionItem.setVisible(false);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                && context instanceof AppCompatActivity
+                && BluetoothAdapter.checkBluetoothAddress(device.getAddress())) {
+            final CompanionDeviceManager manager = BondingUtil.getCompanionDeviceManager(context);
+            if (manager != null) {
+                companionItem.setVisible(true);
+                final boolean associated = manager.getAssociations().stream()
+                        .anyMatch(address -> address.equalsIgnoreCase(device.getAddress()));
+                companionItem.setTitle(associated ? R.string.companion_pairing_bound : R.string.companion_pairing_bind);
+                companionItem.setEnabled(!associated);
+            }
+        }
+
         final boolean detailsShown = expandedDeviceAddress.equals(device.getAddress());
         boolean showInfoIcon = device.hasDeviceInfos() && !device.isBusy();
 
@@ -954,6 +973,11 @@ public class GBDeviceAdapterv2 extends ListAdapter<GBDevice, GBDeviceAdapterv2.V
                     return true;
                 } else if (itemId == R.id.controlcenter_device_submenu_set_alias) {
                     showSetAliasDialog(device);
+                    return true;
+                } else if (itemId == R.id.controlcenter_device_submenu_pair_companion) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && context instanceof AppCompatActivity) {
+                        CompanionPairingFragment.start((AppCompatActivity) context, device.getAddress());
+                    }
                     return true;
                 } else if (itemId == R.id.controlcenter_device_submenu_remove) {
                     showRemoveDeviceDialog(device);

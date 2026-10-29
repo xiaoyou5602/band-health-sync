@@ -19,6 +19,7 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.huawei;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.location.Location;
 import android.net.Uri;
@@ -52,7 +53,8 @@ import nodomain.freeyourgadget.gadgetbridge.service.btle.TransactionBuilder;
 public class HuaweiLESupport extends AbstractBTLESingleDeviceSupport {
     private static final Logger LOG = LoggerFactory.getLogger(HuaweiLESupport.class);
 
-    private final HuaweiSupportProvider supportProvider;
+    private volatile HuaweiSupportProvider supportProvider;
+    private boolean initializationStarted;
 
     public HuaweiLESupport() {
         super(LOG);
@@ -72,7 +74,29 @@ public class HuaweiLESupport extends AbstractBTLESingleDeviceSupport {
 
     @Override
     protected TransactionBuilder initializeDevice(TransactionBuilder builder) {
+        // Peripheral-initiated reconnects reuse this support object. Protocol requests, download
+        // queues and sync locks belong to the old connection and must not survive authentication.
+        if (initializationStarted) {
+            supportProvider.dispose();
+            HuaweiSupportProvider replacement = createSupportProvider();
+            replacement.setContext(getDevice(), getContext());
+            supportProvider = replacement;
+            getDevice().unsetBusyTask();
+        }
+        initializationStarted = true;
         return supportProvider.initializeDevice(builder);
+    }
+
+    HuaweiSupportProvider createSupportProvider() {
+        return new HuaweiSupportProvider(this);
+    }
+
+    @Override
+    public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+        super.onConnectionStateChange(gatt, status, newState);
+        if (newState == BluetoothProfile.STATE_DISCONNECTED && initializationStarted) {
+            supportProvider.dispose();
+        }
     }
 
     @Override

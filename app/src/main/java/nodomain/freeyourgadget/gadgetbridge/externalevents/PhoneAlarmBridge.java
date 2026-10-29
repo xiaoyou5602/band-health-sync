@@ -48,6 +48,45 @@ public final class PhoneAlarmBridge {
     private final Map<String, Runnable> pendingRemovals = new HashMap<>();
     private final Scheduler scheduler;
     private int activeNotificationId;
+    private final Map<String, PhoneActions> phoneActions = new HashMap<>();
+    private boolean actionSent;
+
+    private static final class PhoneActions {
+        final BooleanSupplier dismiss;
+        final BooleanSupplier snooze;
+
+        PhoneActions(BooleanSupplier dismiss, BooleanSupplier snooze) {
+            this.dismiss = dismiss;
+            this.snooze = snooze;
+        }
+    }
+
+    public synchronized void setNotificationActions(String key, BooleanSupplier dismiss, BooleanSupplier snooze) {
+        phoneActions.remove(notificationSource(key));
+        if (activeSources.containsKey(notificationSource(key)) && dismiss != null && snooze != null) {
+            phoneActions.put(notificationSource(key), new PhoneActions(dismiss, snooze));
+        }
+    }
+
+    public synchronized boolean onDeviceAction(int notificationId, int action) {
+        if (!enabledProvider.getAsBoolean() || activeNotificationId == 0
+                || notificationId != activeNotificationId || actionSent || (action != 1 && action != 2)) return false;
+        // Several independent ringing notifications cannot be mapped to one native alarm ID safely.
+        final long liveNotifications = activeSources.keySet().stream()
+                .filter(source -> source.startsWith("notification:") && !pendingRemovals.containsKey(source))
+                .count();
+        if (phoneActions.size() != 1 || liveNotifications != 1) {
+            LOG.warn("Phone alarm action ignored: no unique live notification action");
+            return false;
+        }
+        final PhoneActions actions = phoneActions.values().iterator().next();
+        actionSent = true;
+        final boolean sent = (action == 2 ? actions.dismiss : actions.snooze).getAsBoolean();
+        if (!sent) actionSent = false;
+        LOG.info("Phone alarm device action: action={}, sent={}", action, sent);
+        // Wait for the clock's notification/broadcast to end the session, rather than claiming success here.
+        return sent;
+    }
 
     interface AlarmDispatcher {
         int start(Context context, String packageName);
@@ -96,7 +135,8 @@ public final class PhoneAlarmBridge {
         updateSource(context, notificationSource(key), packageName, ringing, enabledProvider.getAsBoolean());
     }
 
-    public void onNotificationRemoved(final String key) {
+    public synchronized void onNotificationRemoved(final String key) {
+        setNotificationActions(key, null, null);
         updateSource(null, notificationSource(key), null, false, enabledProvider.getAsBoolean());
     }
 
@@ -148,6 +188,7 @@ public final class PhoneAlarmBridge {
                 stopCurrentAlarm("phone alarm done from " + source);
             }
         } else if (activeSources.containsKey(source) && !pendingRemovals.containsKey(source)) {
+            phoneActions.remove(source);
             final Runnable removal = () -> expireNotificationSource(source);
             pendingRemovals.put(source, removal);
             scheduler.schedule(removal, NOTIFICATION_REPLACEMENT_GRACE_MS);
@@ -170,6 +211,7 @@ public final class PhoneAlarmBridge {
                 scheduler.cancel(entry.getValue());
                 pendingRemovals.remove(entry.getKey());
                 activeSources.remove(entry.getKey());
+                phoneActions.remove(entry.getKey());
             }
         }
     }
@@ -184,6 +226,8 @@ public final class PhoneAlarmBridge {
             LOG.info("Phone alarm stopped: {}", reason);
         }
         activeSources.clear();
+        phoneActions.clear();
+        actionSent = false;
         activeNotificationId = 0;
     }
 

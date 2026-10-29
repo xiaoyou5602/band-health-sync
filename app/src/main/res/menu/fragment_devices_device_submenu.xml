@@ -14,6 +14,9 @@
         android:id="@+id/controlcenter_device_submenu_set_parent_folder"
         android:title="@string/controlcenter_set_parent_folder" />
     <item
+        android:id="@+id/controlcenter_device_submenu_pair_companion"
+        android:title="@string/companion_pairing_bind" />
+    <item
         android:id="@+id/controlcenter_device_submenu_set_alias"
         android:title="@string/controlcenter_set_alias" />
     <item

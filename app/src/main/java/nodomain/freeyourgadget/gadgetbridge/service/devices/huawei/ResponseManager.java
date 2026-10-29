@@ -57,6 +57,18 @@ public class ResponseManager {
         }
     }
 
+    public synchronized void cancelAll() {
+        final List<Request> pending;
+        synchronized (handlers) {
+            pending = new ArrayList<>(handlers);
+            handlers.clear();
+        }
+        for (Request request : pending) {
+            request.cancel();
+        }
+        receivedPacket = null;
+    }
+
     /**
      * Remove a request from the response handler list
      * @param handler The request to remove
@@ -84,7 +96,10 @@ public class ResponseManager {
      *
      * @param data The received data
      */
-    public void handleData(byte[] data) {
+    public synchronized void handleData(byte[] data) {
+        if (support.isDisposed()) {
+            return;
+        }
         //NOTE: This is a quick fix issue with concatenated packets.
         //TODO: Extract transport related code from packet.
         int left = 0;
@@ -108,6 +123,7 @@ public class ResponseManager {
             }
 
             if (receivedPacket.complete) {
+                support.onSyncProtocolProgress(receivedPacket.serviceId & 0xff, receivedPacket.commandId & 0xff);
                 logPhoneAlarmProbeResponse(receivedPacket);
 
                 Request handler = null;

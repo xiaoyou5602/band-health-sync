@@ -110,6 +110,8 @@ class CompanionDebugFragment : AbstractDebugFragment() {
         super.onActivityResult(requestCode, resultCode, data)
 
         if (requestCode == SELECT_DEVICE_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+            // Android 12 and older have no onAssociationCreated callback.
+            BondingUtil.StartObservingAll(requireContext())
             val deviceToPair = data?.getParcelableExtra<BluetoothDevice?>(CompanionDeviceManager.EXTRA_DEVICE)
 
             if (deviceToPair != null) {
@@ -127,6 +129,7 @@ class CompanionDebugFragment : AbstractDebugFragment() {
     }
 
     private fun unpairCompanion(device: Device) {
+        LOG.info("Explicit companion removal confirmed in debug settings")
         BondingUtil.Disassociate(requireContext(), device.address)
         reloadDevices()
     }
@@ -180,6 +183,7 @@ class CompanionDebugFragment : AbstractDebugFragment() {
 	        }
 
             override fun onAssociationCreated(associationInfo: AssociationInfo) {
+                BondingUtil.StartObserving(requireContext(), device.address)
                 GB.toast("Companion pairing success", Toast.LENGTH_SHORT, GB.INFO)
                 reloadDevices()
             }

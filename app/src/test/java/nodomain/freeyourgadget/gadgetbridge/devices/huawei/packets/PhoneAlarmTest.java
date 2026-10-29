@@ -6,6 +6,7 @@ import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 
 import nodomain.freeyourgadget.gadgetbridge.devices.huawei.HuaweiPacket;
+import nodomain.freeyourgadget.gadgetbridge.devices.huawei.HuaweiTLV;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 
 public class PhoneAlarmTest {
@@ -35,5 +36,18 @@ public class PhoneAlarmTest {
         assertEquals(0x0a, packet.commandId);
         assertArrayEquals(GB.hexStringToByteArray("5A000C00080A010400000001020102D94E"),
                 packet.serialize().get(0));
+    }
+
+    @Test
+    public void deviceActionsRequireExactVerifiedPayload() {
+        assertEquals(2, PhoneAlarm.readAction(new HuaweiTLV().put(1, 1).put(2, (byte) 2)));
+        assertEquals(1, PhoneAlarm.readAction(new HuaweiTLV().put(1, 1).put(2, (byte) 1)));
+        assertEquals(0, PhoneAlarm.readAction(new HuaweiTLV().put(0x7f, 100000)));
+        assertEquals(0, PhoneAlarm.readAction(new HuaweiTLV().put(1, 2).put(2, (byte) 2)));
+        assertEquals(0, PhoneAlarm.readAction(new HuaweiTLV().put(1, 1).put(2, (byte) 3)));
+        assertEquals(0, PhoneAlarm.readAction(new HuaweiTLV().put(1, (byte) 1).put(2, (byte) 2)));
+        assertEquals(0, PhoneAlarm.readAction(new HuaweiTLV().put(1, 1).put(2, 2)));
+        assertEquals(0, PhoneAlarm.readAction(new HuaweiTLV().put(1, 1)));
+        assertEquals(0, PhoneAlarm.readAction(null));
     }
 }
