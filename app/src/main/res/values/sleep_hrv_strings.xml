@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hrv_sleep_average">Sleep HRV average</string>
+    <string name="hrv_sleep_summary_notice">Sleep average HRV and device baseline, grouped by wake-up date. These are nightly summaries; intranight measurements, a 5-minute maximum and a recovery status are not available.</string>
+</resources>

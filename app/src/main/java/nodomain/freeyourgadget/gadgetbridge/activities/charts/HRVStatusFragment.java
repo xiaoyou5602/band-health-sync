@@ -66,6 +66,7 @@ import nodomain.freeyourgadget.gadgetbridge.database.DBHandler;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.devices.SampleProvider;
 import nodomain.freeyourgadget.gadgetbridge.devices.TimeSampleProvider;
+import nodomain.freeyourgadget.gadgetbridge.devices.huawei.HuaweiHrvSummarySampleProvider;
 import nodomain.freeyourgadget.gadgetbridge.entities.AbstractActivitySample;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.HrvSummarySample;
@@ -115,6 +116,7 @@ public class HRVStatusFragment extends AbstractChartFragment<HRVStatusFragment.H
     private TextView mHRVStatusDayAvg;
     private TextView mHRVStatusBaseline;
     private TextView mDateView;
+    private TextView mSleepHrvNotice;
     private TextView mHRVGaugeValue;
     private TextView mHRVGaugeStatus;
     protected int CHART_TEXT_COLOR;
@@ -182,6 +184,7 @@ public class HRVStatusFragment extends AbstractChartFragment<HRVStatusFragment.H
         mHRVStatusDayAvg = rootView.findViewById(R.id.hrv_status_day_avg);
         mHRVStatusBaseline = rootView.findViewById(R.id.hrv_status_baseline);
         mDateView = rootView.findViewById(R.id.hrv_status_date_view);
+        mSleepHrvNotice = rootView.findViewById(R.id.hrv_sleep_summary_notice);
         mHRVStatusGauge = rootView.findViewById(R.id.hrv_status_gauge_bar);
         mHRVGaugeValue = rootView.findViewById(R.id.hrv_gauge_value);
         mHRVGaugeStatus = rootView.findViewById(R.id.hrv_gauge_status);
@@ -408,6 +411,8 @@ public class HRVStatusFragment extends AbstractChartFragment<HRVStatusFragment.H
         }
 
         HRVStatusDayData today = weeklyData.getCurrentDay();
+        mSleepHrvNotice.setVisibility(weeklyData.getDaysData().stream().anyMatch(day -> day.sleepSummaryOnly)
+                ? View.VISIBLE : View.GONE);
         // Show weekly average even if we don't have full 7 days - it's computed from available data
         mHRVStatusSevenDaysAvg.setText(today.weeklyAvg > 0 ? getString(R.string.hrv_status_unit, today.weeklyAvg) :
                 (today.dayAvg > 0 ? getString(R.string.hrv_status_unit, today.dayAvg) : getString(R.string.stats_empty_value)));
@@ -785,6 +790,8 @@ public class HRVStatusFragment extends AbstractChartFragment<HRVStatusFragment.H
                         sample.getBaselineBalancedUpper() != null ? sample.getBaselineBalancedUpper() : 0,
                         sample.getStatus() != null ? sample.getStatus() : HrvSummarySample.Status.NONE
                 ));
+                weeklyData.get(weeklyData.size() - 1).sleepSummaryOnly =
+                        sample instanceof HuaweiHrvSummarySampleProvider.SleepSummary;
             } else {
                 HRVStatusDayData d = new HRVStatusDayData(
                         (Calendar) day.clone(),
@@ -1020,6 +1027,7 @@ public class HRVStatusFragment extends AbstractChartFragment<HRVStatusFragment.H
     }
 
     protected static class HRVStatusDayData {
+        public boolean sleepSummaryOnly;
         public Integer i;
         public long timestamp;
         public Integer weeklyAvg;

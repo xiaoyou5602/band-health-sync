@@ -104,6 +104,8 @@ class SelfHostedHealthSyncWorker(
             val cursor = prefs.getLong(cursorKey(address), 0L)
             val sleepCursor = prefs.getLong(sleepCursorKey(address), 0L)
             val windowStart = windowStart(prefs, cursor, now, zone)
+            val hrvHistoryKey = "selfhosted_sleep_hrv_history_" + address
+            var hrvReadSucceeded = false
 
             // Reading and packaging share one guard: neither should be able to throw past doWork,
             // or WorkManager records a bare failure and this screen keeps showing the stale status.
@@ -112,10 +114,22 @@ class SelfHostedHealthSyncWorker(
             try {
                 samples = readSamples(device, windowStart, now)
                 val legacy = SelfHostedHealthPayload.build(samples, zone, sleepCursor, now)
-                payload = SelfHostedWorkoutSync.attach(
+                val withWorkouts = SelfHostedWorkoutSync.attach(
                     legacy, { SelfHostedWorkoutReader.read(device, windowStart, now) }, zone, now,
                     prefs.getBoolean(GBPrefs.SELF_HOSTED_HEALTH_WORKOUTS_ENABLED, false)
                 )
+                payload = try {
+                    // Backfill existing nightly statistics once, independently of the sleep cursor.
+                    val from = if (prefs.getBoolean(hrvHistoryKey, false)) windowStart
+                        else maxOf(prefs.getLong(GBPrefs.SELF_HOSTED_HEALTH_INITIAL_SYNC_TS, 0L), now - MAX_WINDOW_SECONDS)
+                    val rows = SelfHostedSleepHrvPayload.read(device, from, now)
+                    val enriched = SelfHostedSleepHrvPayload.attach(withWorkouts, rows, zone, now)
+                    hrvReadSucceeded = true
+                    enriched
+                } catch (e: Exception) {
+                    LOG.warn("Sleep HRV enrichment unavailable ({}); retaining existing payload", e.javaClass.simpleName)
+                    withWorkouts
+                }
             } catch (e: Exception) {
                 LOG.error("Could not prepare self-hosted health payload for {}", address, e)
                 failure = e.message ?: e.javaClass.simpleName
@@ -152,6 +166,7 @@ class SelfHostedHealthSyncWorker(
             if (allSucceeded) {
                 val editor = GBApplication.getPrefs().preferences.edit()
                 editor.putLong(cursorKey(address), now)
+                if (hrvReadSucceeded) editor.putBoolean(hrvHistoryKey, true)
                 if (payload.sleepUploadedThrough > sleepCursor) {
                     editor.putLong(sleepCursorKey(address), payload.sleepUploadedThrough)
                 }
@@ -244,12 +259,13 @@ class SelfHostedHealthSyncWorker(
         payload = prettyPayload(day.body)
     )
 
-    /** Steps count as one record; each heart-rate point, sleep session and workout counts on its own. */
+    /** Each heart-rate point, sleep session, workout and nightly HRV summary counts on its own. */
     private fun countRecords(body: JSONObject): Int {
         var count = if (body.has("steps")) 1 else 0
         count += body.optJSONArray("heart_rate")?.length() ?: 0
         count += body.optJSONArray("sleep")?.length() ?: 0
         count += body.optJSONArray("workouts")?.length() ?: 0
+        count += body.optJSONArray("sleep_hrv")?.length() ?: 0
         return count
     }
 

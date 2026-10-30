@@ -20,6 +20,15 @@
             android:layout_marginTop="15dp"
             />
 
+        <TextView
+            android:id="@+id/hrv_sleep_summary_notice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_margin="12dp"
+            android:text="@string/hrv_sleep_summary_notice"
+            android:textColor="?attr/textColorSecondary"
+            android:visibility="gone" />
+
         <RelativeLayout
             android:id="@+id/hrv_gauge"
             android:layout_width="match_parent"

@@ -39,7 +39,6 @@ import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpec
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettingsCustomizer;
 import nodomain.freeyourgadget.gadgetbridge.activities.devicesettings.DeviceSpecificSettingsScreen;
 import nodomain.freeyourgadget.gadgetbridge.devices.AbstractDeviceCoordinator;
-import nodomain.freeyourgadget.gadgetbridge.devices.ComputedHrvSummarySampleProvider;
 import nodomain.freeyourgadget.gadgetbridge.devices.HuaweiStressSampleProvider;
 import nodomain.freeyourgadget.gadgetbridge.devices.InstallHandler;
 import nodomain.freeyourgadget.gadgetbridge.devices.SampleProvider;
@@ -433,7 +432,7 @@ public abstract class HuaweiCoordinator extends AbstractDeviceCoordinator {
 
     @Override
     public TimeSampleProvider<? extends HrvSummarySample> getHrvSummarySampleProvider(GBDevice device, DaoSession session) {
-        return new ComputedHrvSummarySampleProvider(getHrvValueSampleProvider(device, session), device, session);
+        return new HuaweiHrvSummarySampleProvider(device, session);
     }
 
     @Override

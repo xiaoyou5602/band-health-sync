@@ -17,6 +17,7 @@
 package nodomain.freeyourgadget.gadgetbridge.activities.dashboard;
 
 import android.os.Bundle;
+import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
 
@@ -30,6 +31,7 @@ import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.DashboardFragment;
 import nodomain.freeyourgadget.gadgetbridge.database.DBHandler;
 import nodomain.freeyourgadget.gadgetbridge.devices.TimeSampleProvider;
+import nodomain.freeyourgadget.gadgetbridge.devices.huawei.HuaweiHrvSummarySampleProvider;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.HrvSummarySample;
 
@@ -80,6 +82,7 @@ public class DashboardHrvWidget extends AbstractGaugeWidget<DashboardHrvWidget.H
 
             if (latestSummary != null) {
                 final HrvData hrvData = new HrvData();
+                hrvData.sleepSummaryOnly = latestSummary instanceof HuaweiHrvSummarySampleProvider.SleepSummary;
                 hrvData.weeklyAverage = latestSummary.getWeeklyAverage() != null ? latestSummary.getWeeklyAverage() : 0;
                 hrvData.lastNightAverage = latestSummary.getLastNightAverage() != null ? latestSummary.getLastNightAverage() : 0;
                 hrvData.lastNight5MinHigh = latestSummary.getLastNight5MinHigh() != null ? latestSummary.getLastNight5MinHigh() : 0;
@@ -101,7 +104,12 @@ public class DashboardHrvWidget extends AbstractGaugeWidget<DashboardHrvWidget.H
         final float[] segments = getSegments();
         final float value = hrvData != null ? calculateGaugeValue(hrvData.weeklyAverage, hrvData.baselineLowUpper, hrvData.baselineBalancedLower, hrvData.baselineBalancedUpper) : -1;
         final String valueText;
-        valueText = hrvData != null && hrvData.weeklyAverage > 0 ? getString(R.string.hrv_status_unit, hrvData.weeklyAverage) : getString(R.string.stats_empty_value);
+        final boolean sleepOnly = hrvData != null && hrvData.sleepSummaryOnly;
+        final int displayAverage = hrvData == null ? 0 : sleepOnly ? hrvData.lastNightAverage : hrvData.weeklyAverage;
+        valueText = displayAverage > 0 ? getString(R.string.hrv_status_unit, displayAverage) : getString(R.string.stats_empty_value);
+        if (getView() != null) {
+            ((TextView) getView().findViewById(R.id.gauge_label)).setText(sleepOnly ? R.string.hrv_sleep_average : R.string.hrv);
+        }
         setText(valueText);
         drawSegmentedGauge(
                 colors,
@@ -149,6 +157,7 @@ public class DashboardHrvWidget extends AbstractGaugeWidget<DashboardHrvWidget.H
     }
 
     public static class HrvData {
+        private boolean sleepSummaryOnly;
         private int weeklyAverage;
         private int lastNightAverage;
         private int lastNight5MinHigh;
