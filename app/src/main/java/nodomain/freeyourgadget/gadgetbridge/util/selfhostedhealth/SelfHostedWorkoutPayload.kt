@@ -7,7 +7,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-/** Allowlisted, non-location projection of existing Huawei/BaseActivitySummary records.
+/** Allowlisted, non-location projection of existing device workout summaries.
  * No raw entities, details, addresses or free-form workout names reach serialization.
  */
 data class WorkoutSummaryInput(

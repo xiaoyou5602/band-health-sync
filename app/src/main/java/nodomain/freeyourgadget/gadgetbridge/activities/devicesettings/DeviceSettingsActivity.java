@@ -25,6 +25,7 @@ import com.bytehamster.lib.preferencesearch.SearchPreferenceResult;
 import nodomain.freeyourgadget.gadgetbridge.activities.AbstractSettingsActivityV2;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.R;
 
 public class DeviceSettingsActivity extends AbstractSettingsActivityV2 {
     public static final String MENU_ENTRY_POINT = "MENU_ENTRY_POINT";
@@ -50,6 +51,10 @@ public class DeviceSettingsActivity extends AbstractSettingsActivityV2 {
         DeviceSpecificSettings deviceSpecificSettings = coordinator.getDeviceSpecificSettings(device);
 
         String rootScreenForSubScreen = deviceSpecificSettings.getRootScreenForSubScreen(result.getResourceFile());
+
+        if (result.getResourceFile() == R.xml.devicesettings_background_health_sync) {
+            rootScreenForSubScreen = DeviceSpecificSettingsScreen.HEALTH.getKey();
+        }
 
         if (rootScreenForSubScreen != null) {
             final Intent intent = getIntent(); // FIXME new Intent(this, DeviceSettingsActivity.class);

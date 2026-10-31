@@ -439,32 +439,38 @@ public class GBDeviceAdapterv2 extends ListAdapter<GBDevice, GBDeviceAdapterv2.V
                 batteryStatusLabels[batteryIndex].setVisibility(View.VISIBLE);
             }
         }
-        holder.heartRateStatusBox.setVisibility((device.isInitialized() && coordinator.supportsRealtimeData(device) && coordinator.supportsManualHeartRateMeasurement(device)) ? View.VISIBLE : View.GONE);
-        if (parent.getContext() instanceof ControlCenterv2) {
+        final boolean band10HeartRate = coordinator instanceof
+                nodomain.freeyourgadget.gadgetbridge.devices.huawei.huaweiband10.HuaweiBand10Coordinator;
+        holder.heartRateStatusBox.setVisibility((device.isInitialized()
+                && (coordinator.supportsRealtimeData(device) || band10HeartRate)
+                && coordinator.supportsManualHeartRateMeasurement(device)) ? View.VISIBLE : View.GONE);
+        holder.heartRateIcon.setImageResource(band10HeartRate ? R.drawable.ic_heartrate : R.drawable.ic_heart);
+        holder.heartRateStatusLabel.setText("");
+        holder.heartRateStatusLabel.setVisibility(View.GONE);
+        if (!band10HeartRate && parent.getContext() instanceof ControlCenterv2) {
             ActivitySample sample = ((ControlCenterv2) parent.getContext()).getCurrentHRSample(device);
             if (sample != null) {
                 holder.heartRateStatusLabel.setText(String.valueOf(sample.getHeartRate()));
-            } else {
-                holder.heartRateStatusLabel.setText("");
-            }
-
-            // Hide the level, if it has no text
-            if (TextUtils.isEmpty(holder.heartRateStatusLabel.getText())) {
-                holder.heartRateStatusLabel.setVisibility(View.GONE);
-            } else {
                 holder.heartRateStatusLabel.setVisibility(View.VISIBLE);
             }
         }
 
-        holder.heartRateStatusBox.setOnClickListener(new View.OnClickListener() {
-                                                         @Override
-                                                         public void onClick(View v) {
-                                                             GBApplication.deviceService(device).onHeartRateTest();
-                                                             HeartRateDialog dialog = new HeartRateDialog(device, context);
-                                                             dialog.show();
-                                                         }
-                                                     }
-        );
+        holder.heartRateStatusBox.setOnClickListener(v -> {
+            Runnable startMeasurement = () -> {
+                HeartRateDialog dialog = new HeartRateDialog(device, context);
+                dialog.show();
+                dialog.startMeasurement();
+            };
+            if (band10HeartRate) {
+                new MaterialAlertDialogBuilder(context)
+                        .setMessage(R.string.manual_hr_confirm)
+                        .setNegativeButton(R.string.no, null)
+                        .setPositiveButton(R.string.yes, (dialog, which) -> startMeasurement.run())
+                        .show();
+            } else {
+                startMeasurement.run();
+            }
+        });
 
         //device specific settings
         holder.deviceSpecificSettingsView.setVisibility(coordinator.getSupportedDeviceSpecificSettings(device)  != null ? View.VISIBLE : View.GONE);

@@ -4901,4 +4901,11 @@
 
     <string name="activity_summary_set_header_photo_title">设置页眉照片</string>
     <string name="activity_summary_remove_header_photo_title">移除页眉照片</string>
+    <string name="pref_background_health_sync">后台健康数据同步</string>
+    <string name="pref_background_health_sync_description">保持连接时定时拉取历史，无需解锁手机；可能同时同步睡眠、压力和运动等数据。系统休眠时可能延迟。</string>
+    <string name="manual_hr_busy">另一次测量或同步正在进行，请稍后重试。</string>
+    <string name="manual_hr_timeout">未收到心率，请检查佩戴和连接后重试。</string>
+    <string name="manual_hr_failed">测量已结束，请检查连接后重试。</string>
+    <string name="manual_hr_stop_failed">停止命令未能发送，请检查连接。</string>
+    <string name="manual_hr_confirm">测试即时心率？</string>
 </resources>

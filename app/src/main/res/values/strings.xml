@@ -5345,4 +5345,11 @@
     <string name="cycle_last_start_notice">Last start is the most recent first day of your period that you confirmed. The app predicts the next start date from your cycle length and updates it to an estimated date when it arrives. Tap “My period started” to calibrate it.</string>
     <string name="cycle_pending_clear_title">Server copy not deleted yet</string>
     <string name="cycle_pending_clear_summary">The cycle data on this phone is already gone, but the deletion never reached your server. It will be retried automatically the next time the server is reachable. Check the server address and token if this stays here.</string>
+    <string name="pref_background_health_sync">Background health data sync</string>
+    <string name="pref_background_health_sync_description">Fetches health history while connected, without unlocking the phone. May also retrieve sleep, stress and workouts. Android may delay sync while idle.</string>
+    <string name="manual_hr_busy">Another measurement or sync is running. Try again shortly.</string>
+    <string name="manual_hr_timeout">No heart rate received. Check the fit and connection, then try again.</string>
+    <string name="manual_hr_failed">Measurement ended. Check the connection and try again.</string>
+    <string name="manual_hr_stop_failed">Could not send the stop command. Check the connection.</string>
+    <string name="manual_hr_confirm">Measure heart rate now?</string>
 </resources>

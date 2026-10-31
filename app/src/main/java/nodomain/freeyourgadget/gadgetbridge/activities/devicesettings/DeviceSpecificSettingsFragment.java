@@ -102,6 +102,8 @@ import nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiConst;
 import nodomain.freeyourgadget.gadgetbridge.devices.miband.MiBandConst;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.gps.GBLocationService;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.service.BackgroundHealthSyncScheduler;
+import nodomain.freeyourgadget.gadgetbridge.service.DeviceCommunicationService;
 import nodomain.freeyourgadget.gadgetbridge.model.BatteryConfig;
 import nodomain.freeyourgadget.gadgetbridge.model.CannedMessagesSpec;
 import nodomain.freeyourgadget.gadgetbridge.util.GBPrefs;
@@ -644,6 +646,7 @@ public class DeviceSpecificSettingsFragment extends AbstractPreferenceFragment i
             });
         }
 
+        addPreferenceHandlerFor(BackgroundHealthSyncScheduler.PREF_INTERVAL);
         addPreferenceHandlerFor(PREF_SEND_APP_NOTIFICATIONS);
         addPreferenceHandlerFor(PREF_SWIPE_UNLOCK);
         addPreferenceHandlerFor(PREF_MI2_DATEFORMAT);
@@ -1691,6 +1694,11 @@ public class DeviceSpecificSettingsFragment extends AbstractPreferenceFragment i
                 if (coordinatorDeviceSettings != null) {
                     deviceSpecificSettings.mergeFrom(coordinatorDeviceSettings);
                 }
+            }
+
+            if (DeviceCommunicationService.supportsBackgroundHealthSync(device)) {
+                deviceSpecificSettings.addRootScreen(DeviceSpecificSettingsScreen.HEALTH,
+                        R.xml.devicesettings_background_health_sync);
             }
 
             // Cycle context is phone-only: nothing is read from or sent to the watch, so it does

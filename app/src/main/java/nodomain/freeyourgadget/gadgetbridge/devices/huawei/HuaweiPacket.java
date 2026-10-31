@@ -620,6 +620,8 @@ public class HuaweiPacket {
                 }
             case HrRriTest.id:
                 switch (this.commandId) {
+                    case HrRriTest.RealtimeData.id:
+                        return new HrRriTest.RealtimeData.Response(paramsProvider).fromPacket(this);
                     case HrRriTest.RriData.id:
                         return new HrRriTest.RriData.Response(paramsProvider).fromPacket(this);
                     default:

@@ -110,6 +110,11 @@ public interface EventHandler {
 
     void onHeartRateTest();
 
+    /** Optional request identity and cancellation for a bounded manual measurement. */
+    default void onHeartRateTest(String requestId, boolean start) {
+        if (start) onHeartRateTest();
+    }
+
     void onEnableRealtimeHeartRateMeasurement(boolean enable);
 
     void onFindDevice(boolean start);

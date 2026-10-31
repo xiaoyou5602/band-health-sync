@@ -343,6 +343,7 @@ public class HuaweiSupportProvider {
     protected HuaweiOTAManager huaweiOTAManager = new HuaweiOTAManager(this);
 
     HuaweiStressCalibration stressCalibration = null;
+    private Runnable heartRateProbeCancel;
 
     public HuaweiCoordinator getCoordinator() {
         return ((HuaweiCoordinator) this.gbDevice.getDeviceCoordinator());
@@ -1935,6 +1936,61 @@ public class HuaweiSupportProvider {
         responseManager.addHandler(request);
     }
 
+    private HuaweiHeartRateSession heartRateSession;
+
+    public void onHeartRateTest(String requestId, boolean start) {
+        if (android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) {
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> onHeartRateTest(requestId, start));
+            return;
+        }
+        if (!start) {
+            if (heartRateSession != null && heartRateSession.requestId.equals(requestId)) heartRateSession.cancel();
+            return;
+        }
+        if (!(getDevice().getDeviceCoordinator() instanceof
+                nodomain.freeyourgadget.gadgetbridge.devices.huawei.huaweiband10.HuaweiBand10Coordinator)
+                || !getDevice().isInitialized()) {
+            HuaweiHeartRateSession.publish(this, requestId, 0, "disconnected");
+            return;
+        }
+        if (isHeartRateProbeActive() || stressCalibration != null || getDevice().isBusy()) {
+            if (isHeartRateProbeActive() && heartRateSession != null
+                    && heartRateSession.requestId.equals(requestId)) return;
+            HuaweiHeartRateSession.publish(this, requestId, 0, "busy");
+            return;
+        }
+        heartRateSession = new HuaweiHeartRateSession(this, requestId);
+        heartRateSession.start();
+    }
+
+    public synchronized boolean beginHeartRateProbe(Runnable cancel) {
+        if (heartRateProbeCancel != null || stressCalibration != null) {
+            return false;
+        }
+        heartRateProbeCancel = cancel;
+        return true;
+    }
+
+    public synchronized boolean isHeartRateProbeActive() {
+        return heartRateProbeCancel != null;
+    }
+
+    public synchronized void finishHeartRateProbe(Runnable cancel) {
+        if (heartRateProbeCancel == cancel) {
+            heartRateProbeCancel = null;
+        }
+    }
+
+    public void cancelHeartRateProbe() {
+        final Runnable cancel;
+        synchronized (this) {
+            cancel = heartRateProbeCancel;
+        }
+        if (cancel != null) {
+            cancel.run();
+        }
+    }
+
     /**
      * Add sleep activities
      *
@@ -2289,7 +2345,7 @@ public class HuaweiSupportProvider {
 
     private void calibrateStress() {
 
-        if (stressCalibration != null) {
+        if (stressCalibration != null || isHeartRateProbeActive()) {
             GB.toast(context.getString(R.string.huawei_stress_calibrate_in_progress), Toast.LENGTH_SHORT, GB.INFO);
             return;
         }
@@ -2891,6 +2947,7 @@ public class HuaweiSupportProvider {
         disposed = true;
         handler.removeCallbacks(syncTimeout);
         responseManager.cancelAll();
+        cancelHeartRateProbe();
         dismissActivePhoneAlarm("Huawei support disposed");
         heartRateSyncScheduler.stop();
         stopBatteryRunnerDelayed();
@@ -3314,6 +3371,26 @@ public class HuaweiSupportProvider {
     }
 
     public void onTestNewFunction(@Nullable Bundle options) {
+        final String heartRateProbeAction = options == null
+                ? null
+                : options.getString(HuaweiHeartRateDebugProbeContract.ACTION_KEY);
+        if (HuaweiHeartRateDebugProbeContract.ACTION_START.equals(heartRateProbeAction)
+                || HuaweiHeartRateDebugProbeContract.ACTION_CANCEL.equals(heartRateProbeAction)) {
+            if (!BuildConfig.DEBUG) {
+                LOG.warn("Ignoring Huawei heart rate probe outside a debug build");
+                return;
+            }
+            try {
+                Class.forName("nodomain.freeyourgadget.gadgetbridge.service.devices.huawei.HuaweiHeartRateDebugProbe")
+                        .getMethod(HuaweiHeartRateDebugProbeContract.ACTION_START.equals(heartRateProbeAction)
+                                        ? "start" : "cancel", HuaweiSupportProvider.class)
+                        .invoke(null, this);
+            } catch (ReflectiveOperationException e) {
+                LOG.error("Huawei heart rate debug probe is unavailable", e);
+                GB.toast(context, "心率探针启动或停止失败，请查看调试日志", Toast.LENGTH_LONG, GB.ERROR);
+            }
+            return;
+        }
         final String phoneAlarmProbeAction = options == null
                 ? null
                 : options.getString(HuaweiPhoneAlarmDebugProbeContract.ACTION_KEY);

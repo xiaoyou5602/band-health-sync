@@ -36,6 +36,22 @@ import nodomain.freeyourgadget.gadgetbridge.model.ActivitySummaryEntries;
  */
 public class WorkoutSummaryParserTest {
 
+    @Test
+    public void rawSummaryUploadsWithoutOpeningWorkoutDetails() {
+        final BaseActivitySummary summary = new BaseActivitySummary();
+        summary.setId(123L);
+        summary.setRawSummaryData(Base64.getDecoder().decode(TREADMILL_V11_24APR));
+        summary.setStartTime(nodomain.freeyourgadget.gadgetbridge.service.devices.xiaomi.activity.XiaomiActivityFileId
+                .from(summary.getRawSummaryData()).getTimestamp());
+        final var result = nodomain.freeyourgadget.gadgetbridge.util.selfhostedhealth.GenericWorkoutReader.decode(
+                summary, new WorkoutSummaryParser(), 2000000000L);
+        assertTrue(result.getActiveSeconds() > 0);
+        assertTrue(result.getDistanceMeters() > 0);
+        assertNotNull(result.getAverageHeartRate());
+        assertTrue(result.getEndSeconds() > result.getStartSeconds());
+        assertEquals(500000000000123L, result.getLocalId());
+    }
+
     /** Treadmill v11, 24 Apr 2026, 4.48 km run (calibrated to 4.5 km), goal 4 km. */
     private static final String TREADMILL_V11_24APR =
             "ErHraQgLjQD7/+/vkf/AAD8SsetpMLjraRgHAAB/EQAAiQCVAQAAWAEAABMDAAAnEwAAWACj"

@@ -14,7 +14,9 @@ object SelfHostedWorkoutReader {
     private val LOG = LoggerFactory.getLogger(SelfHostedWorkoutReader::class.java)
 
     fun read(device: GBDevice, fromSeconds: Long, toSeconds: Long): List<WorkoutSummaryInput> {
-        if (device.deviceCoordinator !is HuaweiCoordinator) return emptyList()
+        if (device.deviceCoordinator !is HuaweiCoordinator) {
+            return GenericWorkoutReader.read(device, fromSeconds, toSeconds)
+        }
         return GBApplication.acquireDbReadOnly().use { db ->
             val selector = DBHelper.getDevice(device, db.daoSession) ?: return@use emptyList()
             // Explicit columns: never load GPX paths, raw blobs or coordinates from either table.

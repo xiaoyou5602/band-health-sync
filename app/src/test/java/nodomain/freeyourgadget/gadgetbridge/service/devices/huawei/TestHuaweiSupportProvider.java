@@ -3,7 +3,33 @@ package nodomain.freeyourgadget.gadgetbridge.service.devices.huawei;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+
 public class TestHuaweiSupportProvider {
+
+    @Test
+    public void heartRateProbeAllowsOnlyOneSessionAndRejectsStressOverlap() {
+        HuaweiSupportProvider provider = new HuaweiSupportProvider(new HuaweiBRSupport());
+        AtomicInteger cancels = new AtomicInteger();
+        Runnable cancel = cancels::incrementAndGet;
+        Runnable other = () -> {};
+
+        assertTrue(provider.beginHeartRateProbe(cancel));
+        assertFalse(provider.beginHeartRateProbe(other));
+        provider.finishHeartRateProbe(other);
+        assertTrue(provider.isHeartRateProbeActive());
+        provider.cancelHeartRateProbe();
+        assertEquals(1, cancels.get());
+        provider.finishHeartRateProbe(cancel);
+        assertFalse(provider.isHeartRateProbeActive());
+
+        provider.stressCalibration = new HuaweiStressCalibration(provider);
+        assertFalse(provider.beginHeartRateProbe(cancel));
+    }
 
     @Test
     public void testOnSocketReadExactPacket() {

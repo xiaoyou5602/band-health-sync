@@ -14,6 +14,8 @@ import nodomain.freeyourgadget.gadgetbridge.util.GB
 import java.util.Calendar
 import androidx.core.content.edit
 import nodomain.freeyourgadget.gadgetbridge.util.DateTimeUtils
+import nodomain.freeyourgadget.gadgetbridge.devices.huawei.huaweiband10.HuaweiBand10Coordinator
+import nodomain.freeyourgadget.gadgetbridge.service.devices.huawei.HuaweiHeartRateDebugProbeContract
 
 class OtherDebugFragment : AbstractDebugFragment() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
@@ -24,6 +26,46 @@ class OtherDebugFragment : AbstractDebugFragment() {
         setPreferencesFromResource(R.xml.debug_preferences_other_actions, null)
 
         if (BuildConfig.DEBUG) {
+            addDynamicPref(
+                title = "Band 10 即时心率探针",
+                summary = "测量 15 秒，发送停止命令后继续观察 30 秒；结果记入调试日志",
+                icon = R.drawable.ic_heart
+            ) {
+                runOnDebugDevices("选择 Band 10", true) { device ->
+                    if (device.deviceCoordinator !is HuaweiBand10Coordinator) {
+                        GB.toast(requireContext(), "仅支持 Band 10", Toast.LENGTH_LONG, GB.ERROR)
+                        return@runOnDebugDevices
+                    }
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("即时心率协议探针")
+                        .setMessage("请戴好手环并保持连接。探针会测量最多 15 秒，发送 type=2 停止命令，再观察至少 30 秒。停止效果仍待实测，结果只写入本机调试日志。")
+                        .setNegativeButton(R.string.cancel, null)
+                        .setPositiveButton("开始") { _, _ ->
+                            val options = Bundle().apply {
+                                putString(HuaweiHeartRateDebugProbeContract.ACTION_KEY,
+                                    HuaweiHeartRateDebugProbeContract.ACTION_START)
+                            }
+                            GBApplication.deviceService(device).onTestNewFunction(options)
+                        }
+                        .show()
+                }
+            }
+            addDynamicPref(
+                title = "停止 Band 10 心率探针",
+                summary = "提前发送停止命令并观察 30 秒；观察期间再点将中断记录",
+                icon = R.drawable.ic_stop
+            ) {
+                runOnDebugDevices("选择 Band 10", true) { device ->
+                    if (device.deviceCoordinator !is HuaweiBand10Coordinator) {
+                        return@runOnDebugDevices
+                    }
+                    val options = Bundle().apply {
+                        putString(HuaweiHeartRateDebugProbeContract.ACTION_KEY,
+                            HuaweiHeartRateDebugProbeContract.ACTION_CANCEL)
+                    }
+                    GBApplication.deviceService(device).onTestNewFunction(options)
+                }
+            }
             addDynamicPref(
                 title = getString(R.string.huawei_phone_alarm_probe_title),
                 summary = getString(R.string.huawei_phone_alarm_probe_summary),

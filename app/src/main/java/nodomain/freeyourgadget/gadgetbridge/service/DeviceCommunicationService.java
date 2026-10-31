@@ -106,6 +106,9 @@ import nodomain.freeyourgadget.gadgetbridge.externalevents.VolumeChangeReceiver;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.gps.GBLocationService;
 import nodomain.freeyourgadget.gadgetbridge.externalevents.sleepasandroid.SleepAsAndroidReceiver;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.model.RecordedDataTypes;
+import nodomain.freeyourgadget.gadgetbridge.devices.xiaomi.XiaomiCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.huami.HuamiCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDeviceService;
 import nodomain.freeyourgadget.gadgetbridge.model.Alarm;
 import nodomain.freeyourgadget.gadgetbridge.model.CalendarEventSpec;
@@ -137,6 +140,7 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
         private GBDevice device;
         private DeviceCoordinator coordinator;
         private DeviceSupport deviceSupport;
+        private BackgroundHealthSyncScheduler backgroundHealthSync;
 
         public GBDevice getDevice() {
             return device;
@@ -159,6 +163,10 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
         }
 
         public void setDeviceSupport(DeviceSupport deviceSupport) {
+            if (this.deviceSupport != deviceSupport && backgroundHealthSync != null) {
+                backgroundHealthSync.stop();
+                backgroundHealthSync = null;
+            }
             this.deviceSupport = deviceSupport;
         }
     }
@@ -424,6 +432,45 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
 
     }
 
+    public static boolean supportsBackgroundHealthSync(final GBDevice device) {
+        final DeviceCoordinator coordinator = device.getDeviceCoordinator();
+        return (coordinator instanceof XiaomiCoordinator
+                || coordinator instanceof HuamiCoordinator)
+                && coordinator.supportsDataFetching(device);
+    }
+
+    private void updateBackgroundHealthSync(final DeviceStruct struct) {
+        if (struct == null || struct.getDeviceSupport() == null
+                || !supportsBackgroundHealthSync(struct.getDevice())) return;
+        if (struct.backgroundHealthSync == null) {
+            final DeviceSupport support = struct.getDeviceSupport();
+            struct.backgroundHealthSync = new BackgroundHealthSyncScheduler(
+                    new BackgroundHealthSyncScheduler.Executor() {
+                        @Override
+                        public void postDelayed(Runnable task, long delayMillis) {
+                            serviceCreationHandler.postDelayed(task, delayMillis);
+                        }
+                        @Override
+                        public void removeCallbacks(Runnable task) {
+                            serviceCreationHandler.removeCallbacks(task);
+                        }
+                    },
+                    () -> new BackgroundHealthSyncScheduler.State(
+                            support.getDevice().isInitialized(), support.getDevice().isBusy(),
+                            BackgroundHealthSyncScheduler.intervalMillis(GBApplication.getDevicePrefs(support.getDevice())
+                                    .getString(BackgroundHealthSyncScheduler.PREF_INTERVAL, "3"))),
+                    () -> {
+                        LOG.info("Starting background health history sync");
+                        try {
+                            support.onFetchRecordedData(RecordedDataTypes.TYPE_SYNC);
+                        } catch (RuntimeException e) {
+                            LOG.warn("Unable to start background health history sync", e);
+                        }
+                    });
+        }
+        struct.backgroundHealthSync.update();
+    }
+
     private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -442,6 +489,7 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                     cachedStruct.setDevice(device);
                     DeviceCoordinator newCoordinator = device.getDeviceCoordinator();
                     cachedStruct.setCoordinator(newCoordinator);
+                    updateBackgroundHealthSync(cachedStruct);
                 }
                 updateReceiversState();
 
@@ -1070,12 +1118,20 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
                 break;
             }
             case ACTION_HEARTRATE_TEST: {
-                deviceSupport.onHeartRateTest();
+                String requestId = intentCopy.getStringExtra(EXTRA_HEARTRATE_REQUEST_ID);
+                if (requestId == null) deviceSupport.onHeartRateTest();
+                else deviceSupport.onHeartRateTest(requestId,
+                        intentCopy.getBooleanExtra(EXTRA_HEARTRATE_START, true));
                 break;
             }
             case ACTION_FETCH_RECORDED_DATA: {
+                if (supportsBackgroundHealthSync(device) && deviceSupport.getDevice().isBusy()) {
+                    LOG.debug("Skipping history request while device is busy");
+                    break;
+                }
                 int dataTypes = intentCopy.getIntExtra(EXTRA_RECORDED_DATA_TYPES, 0);
                 deviceSupport.onFetchRecordedData(dataTypes);
+                updateBackgroundHealthSync(getDeviceStructOrNull(device));
                 break;
             }
             case ACTION_FIND_DEVICE: {
@@ -1255,6 +1311,10 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
             }
             case ACTION_SEND_CONFIGURATION: {
                 String config = intentCopy.getStringExtra(EXTRA_CONFIG);
+                if (BackgroundHealthSyncScheduler.PREF_INTERVAL.equals(config)) {
+                    updateBackgroundHealthSync(getDeviceStructOrNull(device));
+                    break;
+                }
                 deviceSupport.onSendConfiguration(config);
                 break;
             }
@@ -1321,6 +1381,10 @@ public class DeviceCommunicationService extends Service implements SharedPrefere
 
     private void removeDeviceSupport(GBDevice device) throws DeviceNotFoundException {
         DeviceStruct struct = getDeviceStruct(device);
+        if (struct.backgroundHealthSync != null) {
+            struct.backgroundHealthSync.stop();
+            struct.backgroundHealthSync = null;
+        }
         DeviceSupport support = struct.getDeviceSupport();
         if(support != null){
             if (BuildConfig.DEBUG) {

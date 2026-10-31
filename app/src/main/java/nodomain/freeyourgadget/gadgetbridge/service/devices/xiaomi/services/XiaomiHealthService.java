@@ -193,6 +193,7 @@ public class XiaomiHealthService extends AbstractXiaomiService {
 
     @Override
     public void initialize() {
+        activityFetcher.dispose();
         gpsStarted = false;
         gpsFixAcquired = false;
         workoutStarted = false;
@@ -206,6 +207,11 @@ public class XiaomiHealthService extends AbstractXiaomiService {
         getSupport().sendCommand("get goal notification config", COMMAND_TYPE, CMD_CONFIG_GOAL_NOTIFICATION_GET);
         getSupport().sendCommand("get goals config", COMMAND_TYPE, CMD_CONFIG_GOALS_GET);
         getSupport().sendCommand("get vitality score config", COMMAND_TYPE, CMD_CONFIG_VITALITY_SCORE_GET);
+    }
+
+    @Override
+    public void onDisconnect() {
+        activityFetcher.dispose();
     }
 
     @Override
@@ -796,7 +802,16 @@ public class XiaomiHealthService extends AbstractXiaomiService {
     public void onFetchRecordedData(final int dataTypes) {
         LOG.debug("Fetch recorded data: {}", String.format("0x%08X", dataTypes));
 
-        fetchRecordedDataToday();
+        if (!activityFetcher.beginFetch()) {
+            LOG.debug("Skipping history request while device is busy or disconnected");
+            return;
+        }
+        try {
+            fetchRecordedDataToday();
+        } catch (RuntimeException e) {
+            activityFetcher.signalComplete();
+            throw e;
+        }
     }
 
     private void fetchRecordedDataToday() {

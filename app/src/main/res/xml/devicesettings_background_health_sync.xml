@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <ListPreference
+        android:defaultValue="3"
+        android:entries="@array/prefs_huawei_heart_rate_sync_interval"
+        android:entryValues="@array/prefs_huawei_heart_rate_sync_interval_values"
+        android:icon="@drawable/ic_heartrate"
+        android:key="background_health_sync_interval"
+        android:title="@string/pref_background_health_sync"
+        app:useSimpleSummaryProvider="true" />
+    <Preference android:key="background_health_sync_description"
+        android:summary="@string/pref_background_health_sync_description"
+        android:selectable="false" />
+</androidx.preference.PreferenceScreen>

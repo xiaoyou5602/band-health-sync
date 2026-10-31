@@ -60,6 +60,7 @@ public class XiaomiActivityFileFetcher {
     private final Queue<XiaomiActivityFileId> mFetchQueue = new PriorityQueue<>();
     private ByteArrayOutputStream mBuffer = new ByteArrayOutputStream();
     private boolean isFetching = false;
+    private boolean requestPending = false;
     private volatile boolean awaitingPastResponse = false;
     private final AtomicBoolean queueHeld = new AtomicBoolean(false);
 
@@ -69,7 +70,21 @@ public class XiaomiActivityFileFetcher {
         this.mHealthService = healthService;
     }
 
+    public boolean beginFetch() {
+        final XiaomiSupport support = mHealthService.getSupport();
+        if (requestPending || isFetching || support.getDevice().isBusy()
+                || !support.getDevice().isInitialized()) return false;
+        requestPending = true;
+        support.getDevice().setBusyTask(R.string.busy_task_fetch_activity_data, support.getContext());
+        support.getDevice().sendDeviceUpdateIntent(support.getContext());
+        return true;
+    }
+
     public void dispose() {
+        requestPending = false;
+        isFetching = false;
+        mFetchQueue.clear();
+        mBuffer = new ByteArrayOutputStream();
         clearTimeout();
         awaitingPastResponse = false;
         queueHeld.set(false);
@@ -180,7 +195,8 @@ public class XiaomiActivityFileFetcher {
 
     public void signalComplete() {
         LOG.debug("Nothing more to fetch");
-        final boolean wasFetching = isFetching;
+        final boolean wasFetching = isFetching || requestPending;
+        requestPending = false;
         isFetching = false;
         queueHeld.set(false);
         if (wasFetching) {

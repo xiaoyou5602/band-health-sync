@@ -16,7 +16,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 package nodomain.freeyourgadget.gadgetbridge.entities;
 
-public class GenericActivitySample extends AbstractActivitySample {
+public class GenericActivitySample extends AbstractActivitySample implements java.io.Serializable {
+    private static final long serialVersionUID = 1L;
     private int timestamp;
     private long userId;
     private long deviceId;

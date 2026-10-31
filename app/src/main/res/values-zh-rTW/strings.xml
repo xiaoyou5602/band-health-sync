@@ -3140,4 +3140,6 @@
     <string name="idasen_pref_stand_height">站立高度(公分)</string>
     <string name="unit_millimeter">公釐</string>
     <string name="centimeters_second">公分/秒</string>
+    <string name="pref_background_health_sync">背景健康資料同步</string>
+    <string name="pref_background_health_sync_description">保持連線時定時擷取歷史，無需解鎖手機；可能同時同步睡眠、壓力和運動等資料。系統休眠時可能延遲。</string>
 </resources>

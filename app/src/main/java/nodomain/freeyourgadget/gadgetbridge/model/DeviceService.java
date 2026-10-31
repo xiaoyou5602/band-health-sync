@@ -55,6 +55,10 @@ public interface DeviceService extends EventHandler {
     String ACTION_APP_REORDER = PREFIX + ".action.app_reorder";
     String ACTION_INSTALL = PREFIX + ".action.install";
     String ACTION_RESET = PREFIX + ".action.reset";
+    String ACTION_HEARTRATE_MEASUREMENT_RESULT = PREFIX + ".action.heartrate_measurement_result";
+    String EXTRA_HEARTRATE_REQUEST_ID = "heartrate_request_id";
+    String EXTRA_HEARTRATE_START = "heartrate_start";
+    String EXTRA_HEARTRATE_ERROR = "heartrate_error";
     String ACTION_HEARTRATE_TEST = PREFIX + ".action.heartrate_test";
     String ACTION_FETCH_RECORDED_DATA = PREFIX + ".action.fetch_activity_data";
     String ACTION_DISCONNECT = PREFIX + ".action.disconnect";

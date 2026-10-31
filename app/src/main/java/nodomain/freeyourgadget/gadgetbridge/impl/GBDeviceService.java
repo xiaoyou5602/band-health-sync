@@ -413,6 +413,13 @@ public class GBDeviceService implements DeviceService {
     }
 
     @Override
+    public void onHeartRateTest(String requestId, boolean start) {
+        invokeService(createIntent().setAction(ACTION_HEARTRATE_TEST)
+                .putExtra(EXTRA_HEARTRATE_REQUEST_ID, requestId)
+                .putExtra(EXTRA_HEARTRATE_START, start));
+    }
+
+    @Override
     public void onHeartRateTest() {
         Intent intent = createIntent().setAction(ACTION_HEARTRATE_TEST);
         invokeService(intent);

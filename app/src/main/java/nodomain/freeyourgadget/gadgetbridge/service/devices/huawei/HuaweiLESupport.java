@@ -238,6 +238,16 @@ public class HuaweiLESupport extends AbstractBTLESingleDeviceSupport {
     }
 
     @Override
+    public void onHeartRateTest() {
+        supportProvider.onHeartRateTest(java.util.UUID.randomUUID().toString(), true);
+    }
+
+    @Override
+    public void onHeartRateTest(String requestId, boolean start) {
+        supportProvider.onHeartRateTest(requestId, start);
+    }
+
+    @Override
     public void onTestNewFunction(@Nullable Bundle options) {
         supportProvider.onTestNewFunction(options);
     }

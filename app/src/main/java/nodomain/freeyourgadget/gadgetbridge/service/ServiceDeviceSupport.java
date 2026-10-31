@@ -343,6 +343,15 @@ public class ServiceDeviceSupport implements DeviceSupport {
     }
 
     @Override
+    public void onHeartRateTest(String requestId, boolean start) {
+        // The bounded session reports busy itself; cancellation must always reach it.
+        if (start && !(delegate.getDevice().getDeviceCoordinator() instanceof
+                nodomain.freeyourgadget.gadgetbridge.devices.huawei.huaweiband10.HuaweiBand10Coordinator)
+                && checkBusy("heartrate")) return;
+        delegate.onHeartRateTest(requestId, start);
+    }
+
+    @Override
     public void onHeartRateTest() {
         if (checkBusy("heartrate")) {
             return;

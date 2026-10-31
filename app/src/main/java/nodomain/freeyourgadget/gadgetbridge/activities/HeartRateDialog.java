@@ -22,11 +22,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Button;
 
 import androidx.annotation.NonNull;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -38,6 +41,9 @@ import java.io.Serializable;
 import java.util.Objects;
 
 import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.devices.huawei.huaweiband10.HuaweiBand10Coordinator;
+import nodomain.freeyourgadget.gadgetbridge.service.devices.huawei.HuaweiHeartRateMeasurement;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 import nodomain.freeyourgadget.gadgetbridge.model.ActivitySample;
 import nodomain.freeyourgadget.gadgetbridge.model.DeviceService;
@@ -45,6 +51,43 @@ import nodomain.freeyourgadget.gadgetbridge.model.HeartRateSample;
 
 public class HeartRateDialog extends Dialog {
     private final GBDevice device;
+    private final String requestId = java.util.UUID.randomUUID().toString();
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private boolean measurementStarted;
+    private boolean terminal;
+    private final Runnable timeout = this::onMeasurementTimeout;
+
+    private void onMeasurementTimeout() {
+        if (!terminal) {
+            terminal = true;
+            GBApplication.deviceService(device).onHeartRateTest(requestId, false);
+            showFailure("timeout");
+        }
+    }
+
+    private boolean isBoundedMeasurement() {
+        return device.getDeviceCoordinator() instanceof HuaweiBand10Coordinator;
+    }
+
+    /** Called after show(), so even an immediate reply has a registered receiver. */
+    public void startMeasurement() {
+        if (measurementStarted) return;
+        measurementStarted = true;
+        if (isBoundedMeasurement()) {
+            handler.postDelayed(timeout, HuaweiHeartRateMeasurement.TIMEOUT_MS + 5_000);
+            GBApplication.deviceService(device).onHeartRateTest(requestId, true);
+        } else {
+            GBApplication.deviceService(device).onHeartRateTest();
+        }
+    }
+
+    private void showFailure(String error) {
+        heart_rate_dialog_loading_layout.setVisibility(View.GONE);
+        heart_rate_dialog_label.setText("busy".equals(error) ? R.string.manual_hr_busy
+                : "timeout".equals(error) ? R.string.manual_hr_timeout
+                : "stop_failed".equals(error) ? R.string.manual_hr_stop_failed
+                : R.string.manual_hr_failed);
+    }
 
     protected static final Logger LOG = LoggerFactory.getLogger(HeartRateDialog.class);
     LinearLayout heart_rate_dialog_results_layout;
@@ -65,9 +108,19 @@ public class HeartRateDialog extends Dialog {
         public void onReceive(Context context, Intent intent) {
             switch (Objects.requireNonNull(intent.getAction())) {
                 case DeviceService.ACTION_REALTIME_SAMPLES:
+                case DeviceService.ACTION_HEARTRATE_MEASUREMENT_RESULT:
                     final GBDevice incomingDevice = intent.getParcelableExtra(GBDevice.EXTRA_DEVICE);
                     if (device.equals(incomingDevice)) {
-                        setMeasurementResults(intent.getSerializableExtra(DeviceService.EXTRA_REALTIME_SAMPLE));
+                        if (isBoundedMeasurement()) {
+                            if (terminal || !measurementStarted || !requestId.equals(
+                                    intent.getStringExtra(DeviceService.EXTRA_HEARTRATE_REQUEST_ID))) return;
+                            terminal = true;
+                            handler.removeCallbacks(timeout);
+                        }
+                        Serializable sample = intent.getSerializableExtra(DeviceService.EXTRA_REALTIME_SAMPLE);
+                        if (sample != null) setMeasurementResults(sample);
+                        String error = intent.getStringExtra(DeviceService.EXTRA_HEARTRATE_ERROR);
+                        if (error != null) showFailure(error);
                     }
                     break;
                 default:
@@ -96,7 +149,8 @@ public class HeartRateDialog extends Dialog {
             HeartRateSample sample = (HeartRateSample) result;
             heartRate = sample.getHeartRate();
         }
-        if (HeartRateUtils.getInstance().isValidHeartRateValue(heartRate)) {
+        if (isBoundedMeasurement() ? heartRate > 0 && heartRate <= 255
+                : HeartRateUtils.getInstance().isValidHeartRateValue(heartRate)) {
             heart_rate_hr.setVisibility(View.VISIBLE);
             heart_rate_widget_hr_value.setText(String.valueOf(heartRate));
         }
@@ -108,6 +162,7 @@ public class HeartRateDialog extends Dialog {
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(DeviceService.ACTION_REALTIME_SAMPLES);
+        if (isBoundedMeasurement()) filter.addAction(DeviceService.ACTION_HEARTRATE_MEASUREMENT_RESULT);
         LocalBroadcastManager.getInstance(getContext()).registerReceiver(mReceiver, filter);
 
         setContentView(R.layout.heart_rate_dialog);
@@ -146,8 +201,22 @@ public class HeartRateDialog extends Dialog {
         heart_rate_dialog_results_layout.setVisibility(View.GONE);
         heart_rate_dialog_loading_layout.setVisibility(View.VISIBLE);
 
-        setOnCancelListener(dialogInterface -> {
-            LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mReceiver);
-        });
+        if (isBoundedMeasurement()) {
+            Button close = new Button(getContext());
+            close.setText(android.R.string.cancel);
+            close.setOnClickListener(v -> dismiss());
+            ((LinearLayout) findViewById(R.id.activity_battery_info_master_layout)).addView(close);
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        handler.removeCallbacks(timeout);
+        LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(mReceiver);
+        if (isBoundedMeasurement() && measurementStarted && !terminal) {
+            terminal = true;
+            GBApplication.deviceService(device).onHeartRateTest(requestId, false);
+        }
+        super.onStop();
     }
 }

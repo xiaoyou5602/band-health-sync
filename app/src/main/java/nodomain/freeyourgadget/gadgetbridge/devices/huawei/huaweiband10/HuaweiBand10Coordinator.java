@@ -28,6 +28,11 @@ import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
 
 public class HuaweiBand10Coordinator extends HuaweiLECoordinator {
     @Override
+    public boolean supportsManualHeartRateMeasurement(GBDevice device) {
+        return true;
+    }
+
+    @Override
     protected Pattern getSupportedDeviceName() {
         return Pattern.compile(HuaweiConstants.HU_BAND10_NAME + ".*", Pattern.CASE_INSENSITIVE);
     }
